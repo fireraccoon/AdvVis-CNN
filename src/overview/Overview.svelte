@@ -1115,7 +1115,7 @@
     
     console.time('Construct cnn');
     model = await loadTrainedModel('PUBLIC_URL/assets/data/model.json');
-    cnn = await constructCNN(`PUBLIC_URL/assets/img/${selectedImage}`, model);
+    cnn = await constructCNN(`PUBLIC_URL/assets/img/origin/${selectedImage}`, model);
     console.timeEnd('Construct cnn');
     cnnStore.set(cnn);
 
@@ -1160,7 +1160,7 @@
       selectedImage = newImageName;
 
       // Re-compute the CNN using the new input image
-      cnn = await constructCNN(`PUBLIC_URL/assets/img/${selectedImage}`, model);
+      cnn = await constructCNN(`PUBLIC_URL/assets/img/origin/${selectedImage}`, model);
 
       // Ignore the flatten layer for now
       let flatten = cnn[cnn.length - 2];
@@ -1492,7 +1492,7 @@
           class:inactive={selectedImage !== image.file}
           class:disabled={disableControl}
           data-imageName={image.file}>
-          <img src="PUBLIC_URL/assets/img/{image.file}"
+          <img src="PUBLIC_URL/assets/img/origin/{image.file}"
             alt="image option"
             title="{image.class}"
             data-imageName={image.file}/>
