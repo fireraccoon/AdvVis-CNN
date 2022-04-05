@@ -1,7 +1,7 @@
 /* global d3, SmoothScroll */
 
 import {
-  svgStore, vSpaceAroundGapStore, hSpaceAroundGapStore, cnnStore,
+  svgStore, vSpaceAroundGapStore, hSpaceAroundGapStore, cnnStore, cnnAdverStore,
   nodeCoordinateStore, selectedScaleLevelStore, cnnLayerRangesStore,
   cnnLayerMinMaxStore, isInSoftmaxStore, softmaxDetailViewStore,
   hoverInfoStore, allowsSoftmaxAnimationStore, detailedModeStore
@@ -38,6 +38,9 @@ hSpaceAroundGapStore.subscribe( value => {hSpaceAroundGap = value;} )
 
 let cnn = undefined;
 cnnStore.subscribe( value => {cnn = value;} )
+
+let cnnAdver = undefined;
+cnnAdverStore.subscribe( value => {cnnAdver = value;} )
 
 let nodeCoordinate = undefined;
 nodeCoordinateStore.subscribe( value => {nodeCoordinate = value;} )
@@ -83,6 +86,7 @@ let layerIndexDict = {
 
 let hasInitialized = false;
 let logits = [];
+let logitsAdver = [];
 let flattenFactoredFDict = {};
 
 const moveLegend = (d, i, g, moveX, duration, restore) => {
@@ -265,6 +269,11 @@ const drawLogitLayer = (arg) => {
   logits = [];
   for (let i = 0; i < cnn[layerIndexDict['output']].length; i++) {
     logits.push(cnn[layerIndexDict['output']][i].logit);
+  }
+
+  logitsAdver = [];
+  for (let i = 0; i < cnnAdver[layerIndexDict['output']].length; i++) {
+    logitsAdver.push(cnnAdver[layerIndexDict['output']][i].logit);
   }
 
   // Construct a color scale for the logit values
@@ -542,7 +551,7 @@ const drawLogitLayer = (arg) => {
   let pos = getMidCoords(svg, anchorElement);
   let wholeSvg = d3.select('#cnn-svg');
   let svgYMid = +wholeSvg.style('height').replace('px', '') / 2;
-  let detailViewTop = 100 + svgYMid - 192 / 2;
+  let detailViewTop = 100 + svgYMid - 384 / 2;
 
   const detailview = document.getElementById('detailview');
   detailview.style.top = `${detailViewTop}px`;
@@ -552,11 +561,13 @@ const drawLogitLayer = (arg) => {
   softmaxDetailViewStore.set({
     show: true,
     logits: logits,
+    logitsAdver: logitsAdver,
     logitColors: logits.map(d => layerColorScales.logit(logitColorScale(d))),
     selectedI: selectedI,
     highlightI: -1,
     outputName: classList[selectedI],
     outputValue: cnn[layerIndexDict['output']][selectedI].output,
+    outputAdverValue: cnnAdver[layerIndexDict['output']][selectedI].output,
     startAnimation: {i: -1, duration: 0, hasInitialized: hasInitialized}
   })
 
@@ -609,7 +620,8 @@ const removeLogitLayer = () => {
 
   softmaxDetailViewStore.set({
       show: false,
-      logits: []
+      logits: [],
+      logitsAdver: []
   })
 }
 

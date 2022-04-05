@@ -181,7 +181,7 @@
     {file: 'orange_1.jpeg', class: 'orange'},
     {file: 'car_1.jpeg', class: 'sport car'}
   ];
-  let selectedImage = imageOptions[6].file;
+  let selectedImage = imageOptions[3].file;
 
   let nodeData;
   let selectedNodeIndex = -1;
@@ -1632,10 +1632,12 @@
               isExited={isExitedFromDetailedView}/>
   {:else if softmaxDetailViewInfo.show}
     <SoftmaxView logits={softmaxDetailViewInfo.logits}
+                 logitsAdver={softmaxDetailViewInfo.logitsAdver}
                  logitColors={softmaxDetailViewInfo.logitColors}
                  selectedI={softmaxDetailViewInfo.selectedI}
                  highlightI={softmaxDetailViewInfo.highlightI}
                  outputName={softmaxDetailViewInfo.outputName}
+                 outputAdverValue={softmaxDetailViewInfo.outputAdverValue}
                  outputValue={softmaxDetailViewInfo.outputValue}
                  startAnimation={softmaxDetailViewInfo.startAnimation}
                  on:xClicked={handleExitFromDetiledSoftmaxView}

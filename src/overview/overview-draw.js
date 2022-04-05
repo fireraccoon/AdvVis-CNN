@@ -130,12 +130,12 @@ export const drawOutput = (d, i, g, range) => {
  */
 const drawOutputScore = (d, i, g, scale) => {
   let group = d3.select(g[i]);
-  group.select('rect.output-rect')
+  group.selectAll('rect.output-rect')
     .transition('output')
     .delay(500)
     .duration(800)
     .ease(d3.easeCubicIn)
-    .attr('width', scale(d.output))
+    .attr('width', (dd, ii) => scale(ii == 0 ? d.output : d.outputAdver))
 }
 
 export const drawCustomImage = (image, inputLayer) => {
@@ -439,9 +439,10 @@ export const drawCNN = (width, height, cnnGroup, nodeMouseOverHandler,
       (curLayer.length + 1);
     vSpaceAroundGapStore.set(vSpaceAroundGap);
 
-    /** Add the adversary inputLinks */
+    /** Add the adversary info */
     curLayer.forEach((d, i) => {
       d.inputAdverLinks = cnnAdver[l][i].inputLinks;
+      d.outputAdver = cnnAdver[l][i].output;
     });
 
     let nodeGroups = layerGroup.selectAll('g.node-group')
@@ -503,9 +504,16 @@ export const drawCNN = (width, height, cnnGroup, nodeMouseOverHandler,
         .attr('class', 'output-rect')
         .attr('x', left)
         .attr('y', (d, i) => nodeCoordinate[l][i].y + nodeLength / 2 + 8)
-        .attr('height', nodeLength / 4)
+        .attr('height', nodeLength / 5)
         .attr('width', 0)
-        .style('fill', 'gray');
+        .style('fill', 'green');
+      nodeGroups.append('rect')
+          .attr('class', 'output-rect')
+          .attr('x', left)
+          .attr('y', (d, i) => nodeCoordinate[l][i].y + nodeLength / 2 + nodeLength / 4 + 8)
+          .attr('height', nodeLength / 5)
+          .attr('width', 0)
+          .style('fill', 'red');
       nodeGroups.append('text')
         .attr('class', 'output-text')
         .attr('x', left)
@@ -736,6 +744,13 @@ export const updateCNN = () => {
   for (let l = 0; l < cnn.length; l++) {
     let curLayer = cnn[l];
     let range = cnnLayerRanges[selectedScaleLevel][l];
+
+    /** Add the adversary info */
+    curLayer.forEach((d, i) => {
+      d.inputAdverLinks = cnnAdver[l][i].inputLinks;
+      d.outputAdver = cnnAdver[l][i].output;
+    });
+
     let layerGroup = svg.select(`g#cnn-layer-group-${l}`);
 
     let nodeGroups = layerGroup.selectAll('g.node-group')

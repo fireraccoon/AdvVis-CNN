@@ -1,11 +1,13 @@
 <script>
   import { onMount, afterUpdate, createEventDispatcher } from 'svelte';
   export let logits;
+  export let logitsAdver;
   export let logitColors;
   export let selectedI;
   export let highlightI = -1;
   export let outputName;
   export let outputValue;
+  export let outputAdverValue;
   export let startAnimation;
 
   let softmaxViewComponent;
@@ -63,7 +65,7 @@
 
   onMount(() => {
     svg = d3.select(softmaxViewComponent)
-      .select('#softmax-svg');
+      .selectAll('.softmax-svg');
 
     let formulaRightGroup = svg.append('g')
       .attr('class', 'formula-right')
@@ -86,7 +88,7 @@
     // we want dynamic positioning based on prior '-' occurance
     let curX = 8;
     let numOfRows = 4;
-
+    
     logits.forEach((d, i) => {
       if (i / numOfRows >= 1 && i % numOfRows === 0) {
           curX = 8;
@@ -106,7 +108,7 @@
         .attr('dx', '1')
         .style('fill', logitColors[i])
         .style('fill-opacity', (i === selectedI) || startAnimation.hasInitialized ? 1 : 0)
-        .text(formater(d));
+        .text((dd, ii) => formater(ii == 0 ? d : logitsAdver[i]));
       
       curText.append('tspan')
         .attr('dx', '1')
@@ -131,7 +133,7 @@
     })
 
     denominatorGroup.selectAll('text')
-      .data(logits)
+      .data((d, i) => i == 0 ? logits : logitsAdver)
       .enter()
       .append('text')
       .attr('x', (d, i) => 40 * i)
@@ -170,7 +172,7 @@
       .attr('class', `formula-term-${selectedI} formula-term`)
       .attr('dx', 1)
       .style('fill', logitColors[selectedI])
-      .text(`${formater(logits[selectedI])}`);
+      .text((d, i) => formater(i == 0 ? logits[selectedI] : logitsAdver[selectedI]));
 
     numeratorText.append('tspan')
        .attr('dx', 1)
@@ -184,7 +186,7 @@
     let softmaxText = formulaLeftGroup.append('text')
       .attr('x', 20)
       .attr('dominant-baseline', 'middle')
-      .text(`${formater(outputValue, 4)}`);
+      .text((d, i) => formater(i == 0 ? outputValue : outputAdverValue, 4));
     
     let softmaxTextBBox = softmaxText.node().getBBox();
     
@@ -226,6 +228,7 @@
     font-size: 1.2em;
     font-weight: 500;
     color: #4a4a4a;
+    margin-bottom: 14px;
   }
 
   .annotation {
@@ -249,8 +252,13 @@
     align-items: center;
   }
 
+  .origin-header, .adversary-header {
+    width: 100%;
+    padding: 0 6px;
+  }
+
   svg {
-    margin: 10px 0 12px 0;
+    margin-bottom: 14px;
   }
 </style>
 
@@ -271,7 +279,13 @@
       Softmax Score for <i>"{outputName}"</i>
     </div>
 
-    <svg id="softmax-svg" width="470" height="105"/>
+    <div class="origin-header">Origin</div>
+    
+    <svg class="softmax-svg" width="470" height="105"/>
+
+    <div class="adversary-header">Adversary</div>
+    
+    <svg class="softmax-svg" width="470" height="105"/>
 
     <div class="annotation">
       <img src='PUBLIC_URL/assets/img/pointer.svg' alt='pointer icon'>
