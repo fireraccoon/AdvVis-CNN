@@ -2,8 +2,13 @@
 	import ActivationAnimator from './ActivationAnimator.svelte';
   import { createEventDispatcher } from 'svelte';
 
+  let origin_animator;
+  let adversary_animator;
+
   export let input;
+  export let inputAdver;
   export let output;
+  export let outputAdver;
   export let dataRange;
   export let isExited;
 
@@ -15,7 +20,11 @@
   }
 
   function handlePauseFromInteraction(event) {
-    isPaused = event.detail.text;
+    isPaused = event.detail.isPaused;
+    d3.select(event.detail.adversary ? origin_animator : adversary_animator)
+      .select(`#grid > svg > .row:nth-child(${event.detail.hoverH + 1}) > 
+        .square:nth-child(${event.detail.hoverW + 1})`)
+      .dispatch("follow-mouseover");
   }
 
   function handleClickX() {
@@ -121,10 +130,16 @@
 
       </div>
 
-      <div class="container is-centered is-vcentered">
+      <div class="container is-centered is-vcentered" bind:this={origin_animator}>
         <ActivationAnimator on:message={handlePauseFromInteraction} 
           image={input} output={output} isPaused={isPaused}
           dataRange={dataRange}/>
+      </div>
+      
+      <div class="container is-centered is-vcentered" bind:this={adversary_animator}>
+        <ActivationAnimator on:message={handlePauseFromInteraction} 
+          image={inputAdver} output={outputAdver} isPaused={isPaused}
+          dataRange={dataRange} adversary/>
       </div>
 
       <div class="annotation">

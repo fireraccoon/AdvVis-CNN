@@ -15,6 +15,7 @@
   export let kernel;
   export let image;
   export let output;
+  export let adversary = false;
   export let isPaused;
   export let dataRange;
   export let colorScale;
@@ -80,9 +81,14 @@
     const outputMatrixSlice = getMatrixSliceFromOutputHighlights(output, outputHighlights);
     testOutputMatrixSlice = gridData(outputMatrixSlice);
     isPaused = true;
-    dispatch('message', {
-      text: isPaused
-    });
+    if (!event.detail.trigger) {
+      dispatch('message', {
+        isPaused: isPaused,
+        adversary: adversary,
+        hoverH: animatedH,
+        hoverW: animatedW
+      });
+    }
   }
 
   startConvolution(stride);
@@ -113,6 +119,11 @@
       isInputLayer={isInputInputLayer}/>
 </div>
 <div class="column has-text-centered">
+  {#if !adversary}
+    <div class="origin-header">Origin</div>
+  {:else}
+    <div class="adversary-header">Adversary</div>
+  {/if}
   <KernelMathView data={testInputMatrixSlice} kernel={testKernel} constraint={getVisualizationSizeConstraint(kernel.length)}
                   dataRange={dataRange} kernelRange={getDataRange(kernel)} colorScale={colorScale}
                   isInputLayer={isInputInputLayer}/>

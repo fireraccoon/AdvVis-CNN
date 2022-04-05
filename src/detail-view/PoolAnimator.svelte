@@ -11,6 +11,7 @@
   export let kernelLength;
   export let image;
   export let output;
+  export let adversary = false;
   export let isPaused;
   export let dataRange;
 
@@ -75,9 +76,14 @@
     const outputMatrixSlice = getMatrixSliceFromOutputHighlights(output, outputHighlights);
     testOutputMatrixSlice = gridData(outputMatrixSlice);
     isPaused = true;
-    dispatch('message', {
-      text: isPaused
-    });
+    if (!event.detail.trigger) {
+      dispatch('message', {
+        isPaused: isPaused,
+        adversary: adversary,
+        hoverH: animatedH * stride,
+        hoverW: animatedW * stride
+      });
+    }
   }
 
   startMaxPool(stride);
@@ -105,6 +111,11 @@
       isKernelMath={false} constraint={getVisualizationSizeConstraint(image.length)} dataRange={dataRange} stride={stride}/>  
 </div>
 <div class="column has-text-centered">
+  {#if !adversary}
+    <div class="origin-header">Origin</div>
+  {:else}
+    <div class="adversary-header">Adversary</div>
+  {/if}
   <span>
     max(
     <Dataview data={testInputMatrixSlice} highlights={outputHighlights} isKernelMath={true} 

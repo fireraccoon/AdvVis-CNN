@@ -269,6 +269,18 @@ export const constructCNN = async (inputImageFile, model) => {
   return cnn;
 }
 
+/**
+ * Construct CNNs with given models and inputs.
+ * 
+ * @param {string[]} inputImageFiles filename of input images.
+ * @param {Model} model Loaded tf.js model.
+ */
+ export const constructCNNs = async (inputImageFiles, model) => {
+  return await Promise.all(
+    inputImageFiles.map(async f => await constructCNN(f, model))
+  )
+}
+
 // Helper functions
 
 /**

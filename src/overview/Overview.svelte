@@ -2,7 +2,7 @@
   // Svelte functions
   import { onMount } from 'svelte';
   import {
-    cnnStore, svgStore, vSpaceAroundGapStore, hSpaceAroundGapStore,
+    cnnStore, cnnAdverStore, svgStore, vSpaceAroundGapStore, hSpaceAroundGapStore,
     nodeCoordinateStore, selectedScaleLevelStore, cnnLayerRangesStore,
     needRedrawStore, cnnLayerMinMaxStore, detailedModeStore,
     shouldIntermediateAnimateStore, isInSoftmaxStore, softmaxDetailViewStore,
@@ -19,7 +19,7 @@
   import Article from '../article/Article.svelte';
 
   // Overview functions
-  import { loadTrainedModel, constructCNN } from '../utils/cnn-tf.js';
+  import { loadTrainedModel, constructCNNs } from '../utils/cnn-tf.js';
   import { overviewConfig } from '../config.js';
 
   import {
@@ -124,6 +124,7 @@
 
   // Wait to load
   let cnn = undefined;
+  let cnnAdver = undefined;
 
   let detailedViewAbsCoords = {
     1 : [600, 270, 490, 290],
@@ -291,7 +292,7 @@
       let wholeSvg = d3.select('#cnn-svg');
       let svgYMid = +wholeSvg.style('height').replace('px', '') / 2;
       let svgWidth = +wholeSvg.style('width').replace('px', '');
-      let detailViewTop = 100 + svgYMid - 250 / 2;
+      let detailViewTop = 100 + svgYMid - 500 / 2;
       let positionX = intermediateLayerPosition[Object.keys(layerIndexDict)[curLayerIndex]];
 
       let posX = 0;
@@ -560,7 +561,7 @@
     let wholeSvg = d3.select('#cnn-svg');
     let svgYMid = +wholeSvg.style('height').replace('px', '') / 2;
     let svgWidth = +wholeSvg.style('width').replace('px', '');
-    let detailViewTop = 100 + svgYMid - 260 / 2;
+    let detailViewTop = 100 + svgYMid - 520 / 2;
 
     let posX = 0;
     if (curLayerIndex > 5) {
@@ -818,8 +819,10 @@
       for (let j = 0; j < d.inputLinks.length; j++) {
         data.push({
           input: d.inputLinks[j].source.output,
+          inputAdver: d.inputAdverLinks[j].source.output,
           kernel: d.inputLinks[j].weight,
           output: d.inputLinks[j].dest.output,
+          outputAdver: d.inputAdverLinks[j].dest.output,
         })
       }
       let curLayerIndex = layerIndexDict[d.layerName];
@@ -1115,15 +1118,21 @@
     
     console.time('Construct cnn');
     model = await loadTrainedModel('PUBLIC_URL/assets/data/model.json');
-    cnn = await constructCNN(`PUBLIC_URL/assets/img/origin/${selectedImage}`, model);
+    [cnn, cnnAdver] = await constructCNNs(
+      [`PUBLIC_URL/assets/img/origin/${selectedImage}`, `PUBLIC_URL/assets/img/adversary/${selectedImage}`],
+      model);
     console.timeEnd('Construct cnn');
-    cnnStore.set(cnn);
 
     // Ignore the flatten layer for now
     let flatten = cnn[cnn.length - 2];
     cnn.splice(cnn.length - 2, 1);
     cnn.flatten = flatten;
+    cnnStore.set(cnn);
     console.log(cnn);
+
+    cnnAdver.flatten = cnnAdver.splice(cnnAdver.length - 2, 1);
+    cnnAdverStore.set(cnnAdver);
+    console.log(cnnAdver);
 
     updateCNNLayerRanges();
 
@@ -1160,13 +1169,18 @@
       selectedImage = newImageName;
 
       // Re-compute the CNN using the new input image
-      cnn = await constructCNN(`PUBLIC_URL/assets/img/origin/${selectedImage}`, model);
+      [cnn, cnnAdver] = await constructCNNs(
+        [`PUBLIC_URL/assets/img/origin/${selectedImage}`, `PUBLIC_URL/assets/img/adversary/${selectedImage}`],
+        model);
 
       // Ignore the flatten layer for now
       let flatten = cnn[cnn.length - 2];
       cnn.splice(cnn.length - 2, 1);
       cnn.flatten = flatten;
       cnnStore.set(cnn);
+
+      cnnAdver.flatten = cnnAdver.splice(cnnAdver.length - 2, 1);
+      cnnAdverStore.set(cnnAdver);
 
       // Update all scales used in the CNN view
       updateCNNLayerRanges();
@@ -1214,13 +1228,18 @@
     customImageURL = event.detail.url;
 
     // Re-compute the CNN using the new input image
-    cnn = await constructCNN(customImageURL, model);
+    [cnn, cnnAdver] = await constructCNNs(
+      [`PUBLIC_URL/assets/img/origin/${selectedImage}`, `PUBLIC_URL/assets/img/adversary/${selectedImage}`],
+      model);
 
     // Ignore the flatten layer for now
     let flatten = cnn[cnn.length - 2];
     cnn.splice(cnn.length - 2, 1);
     cnn.flatten = flatten;
     cnnStore.set(cnn);
+
+    cnnAdver.flatten = cnnAdver.splice(cnnAdver.length - 2, 1);
+    cnnAdverStore.set(cnnAdver);
 
     // Update the UI
     let customImageSlot = d3.select(overviewComponent)
@@ -1478,6 +1497,20 @@
     cursor: pointer;
   }
 
+  :global(.origin-header) {
+    line-height: 1.5;
+    padding-bottom: 2px;
+    font-weight: 600;
+    color: var(--green);
+  }
+
+  :global(.adversary-header) {
+    line-height: 1.5;
+    padding-bottom: 2px;
+    font-weight: 600;
+    color: var(--red);
+  }
+
 </style>
 
 <div class="overview"
@@ -1577,6 +1610,7 @@
 <div id='detailview'>
   {#if selectedNode.data && selectedNode.data.type === 'conv' && selectedNodeIndex != -1}
     <ConvolutionView on:message={handleExitFromDetiledConvView} input={nodeData[selectedNodeIndex].input} 
+                      inputAdver={nodeData[selectedNodeIndex].inputAdver}
                       kernel={nodeData[selectedNodeIndex].kernel}
                       dataRange={nodeData.colorRange}
                       colorScale={nodeData.inputIsInputLayer ?
@@ -1585,11 +1619,14 @@
                       isExited={isExitedFromCollapse}/>
   {:else if selectedNode.data && selectedNode.data.type === 'relu'}
     <ActivationView on:message={handleExitFromDetiledActivationView} input={nodeData[0].input} 
+                    inputAdver={nodeData[0].inputAdver}
                     output={nodeData[0].output}
+                    outputAdver={nodeData[0].outputAdver}
                     dataRange={nodeData.colorRange}
                     isExited={isExitedFromDetailedView}/>
   {:else if selectedNode.data && selectedNode.data.type === 'pool'}
     <PoolView on:message={handleExitFromDetiledPoolView} input={nodeData[0].input} 
+              inputAdver={nodeData[0].inputAdver}
               kernelLength={2}
               dataRange={nodeData.colorRange}
               isExited={isExitedFromDetailedView}/>

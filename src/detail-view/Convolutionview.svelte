@@ -3,7 +3,11 @@
   import { singleConv } from '../utils/cnn.js';
   import { createEventDispatcher } from 'svelte';
 
+  let origin_animator;
+  let adversary_animator;
+
   export let input;
+  export let inputAdver;
   export let kernel;
   export let dataRange;
   export let colorScale = d3.interpolateRdBu;
@@ -16,9 +20,11 @@
   const dilation = 1;
   var isPaused = false;
   var outputFinal = singleConv(input, kernel, stride);
+  var outputAdverFinal = singleConv(inputAdver, kernel, stride);
   $: if (stride > 0) {
     try { 
       outputFinal = singleConv(input, kernel, stride);
+      outputAdverFinal = singleConv(inputAdver, kernel, stride);
     } catch {
       console.log("Cannot handle stride of " + stride);
     }
@@ -36,7 +42,11 @@
   }
 
   function handlePauseFromInteraction(event) {
-    isPaused = event.detail.text;
+    isPaused = event.detail.isPaused;
+    d3.select(event.detail.adversary ? origin_animator : adversary_animator)
+      .select(`#grid > svg > .row:nth-child(${event.detail.hoverH + 1}) > 
+        .square:nth-child(${event.detail.hoverW + 1})`)
+      .dispatch("follow-mouseover");
   }
 
   function handleClickX() {
@@ -151,12 +161,20 @@
         </div>
       </div>
 
-      <div class="container is-centered">
+      <div class="container is-centered" bind:this={origin_animator}>
         <ConvolutionAnimator on:message={handlePauseFromInteraction} 
           kernel={kernel} image={input} output={outputFinal} 
           stride={stride} dilation={dilation} isPaused={isPaused}
           dataRange={dataRange} colorScale={colorScale}
           isInputInputLayer={isInputInputLayer} />
+      </div>
+
+      <div class="container is-centered" bind:this={adversary_animator}>
+        <ConvolutionAnimator on:message={handlePauseFromInteraction} 
+          kernel={kernel} image={inputAdver} output={outputAdverFinal} 
+          stride={stride} dilation={dilation} isPaused={isPaused}
+          dataRange={dataRange} colorScale={colorScale}
+          isInputInputLayer={isInputInputLayer} adversary/>
       </div>
 
       <div class="annotation">

@@ -1,7 +1,7 @@
 /* global d3, SmoothScroll */
 
 import {
-  svgStore, vSpaceAroundGapStore, hSpaceAroundGapStore, cnnStore,
+  svgStore, vSpaceAroundGapStore, hSpaceAroundGapStore, cnnStore, cnnAdverStore,
   nodeCoordinateStore, selectedScaleLevelStore, cnnLayerRangesStore,
   detailedModeStore, cnnLayerMinMaxStore, hoverInfoStore
 } from '../stores.js';
@@ -34,6 +34,9 @@ hSpaceAroundGapStore.subscribe( value => {hSpaceAroundGap = value;} )
 
 let cnn = undefined;
 cnnStore.subscribe( value => {cnn = value;} )
+
+let cnnAdver = undefined;
+cnnAdverStore.subscribe(value => cnnAdver = value);
 
 let nodeCoordinate = undefined;
 nodeCoordinateStore.subscribe( value => {nodeCoordinate = value;} )
@@ -260,7 +263,6 @@ const drawLegends = (legends, legendHeight) => {
       .attr('width', 2 * nodeLength + hSpaceAroundGap)
       .attr('height', legendHeight)
       .style('fill', 'url(#convGradient)');
-
     let localLegend2 = legends.append('g')
       .attr('class', 'legend local-legend')
       .attr('id', `local-legend-${i}-2`)
@@ -436,6 +438,11 @@ export const drawCNN = (width, height, cnnGroup, nodeMouseOverHandler,
     vSpaceAroundGap = (height - nodeLength * curLayer.length) /
       (curLayer.length + 1);
     vSpaceAroundGapStore.set(vSpaceAroundGap);
+
+    /** Add the adversary inputLinks */
+    curLayer.forEach((d, i) => {
+      d.inputAdverLinks = cnnAdver[l][i].inputLinks;
+    });
 
     let nodeGroups = layerGroup.selectAll('g.node-group')
       .data(curLayer, d => d.index)

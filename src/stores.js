@@ -1,6 +1,7 @@
 import { writable } from 'svelte/store';
 
 export const cnnStore = writable([]);
+export const cnnAdverStore = writable([]);
 export const svgStore = writable(undefined);
 
 export const vSpaceAroundGapStore = writable(undefined);

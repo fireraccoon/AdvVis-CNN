@@ -3,7 +3,11 @@
   import { singleMaxPooling } from '../utils/cnn.js';
   import { createEventDispatcher } from 'svelte';
 
+  let origin_animator;
+  let adversary_animator;
+
   export let input;
+  export let inputAdver;
   export let kernelLength;
   export let dataRange;
   export let isExited;
@@ -14,12 +18,14 @@
   const dilation = 1;
   var isPaused = false;
   var outputFinal = singleMaxPooling(input);
+  var outputAdverFinal = singleMaxPooling(inputAdver);
   // let dragging = false;
   // let dragInfo = {x1: 0, x2: 0, y1: 0, y2: 0};
   // let detailView = d3.select('#detailview').node();
   $: if (stride > 0) {
     try { 
       outputFinal = singleMaxPooling(input);
+      outputAdverFinal = singleMaxPooling(inputAdver);
     } catch {
       console.log("Cannot handle stride of " + stride);
     }
@@ -31,7 +37,11 @@
   }
 
   function handlePauseFromInteraction(event) {
-    isPaused = event.detail.text;
+    isPaused = event.detail.isPaused;
+    d3.select(event.detail.adversary ? origin_animator : adversary_animator)
+      .select(`#grid > svg > .row:nth-child(${event.detail.hoverH + 1}) > 
+        .square:nth-child(${event.detail.hoverW + 1})`)
+      .dispatch("follow-mouseover");
   }
 
   function handleClickX() {
@@ -181,11 +191,18 @@
 
       </div>
 
-      <div class="container is-centered is-vcentered">
+      <div class="container is-centered is-vcentered" bind:this={origin_animator}>
         <PoolAnimator on:message={handlePauseFromInteraction} 
           kernelLength={kernelLength} image={input} output={outputFinal} 
           stride={stride} dilation={dilation} isPaused={isPaused}
           dataRange={dataRange} />
+      </div>
+
+      <div class="container is-centered is-vcentered" bind:this={adversary_animator}>
+        <PoolAnimator on:message={handlePauseFromInteraction} 
+          kernelLength={kernelLength} image={inputAdver} output={outputAdverFinal} 
+          stride={stride} dilation={dilation} isPaused={isPaused}
+          dataRange={dataRange} adversary/>
       </div>
 
       <div class="annotation">
