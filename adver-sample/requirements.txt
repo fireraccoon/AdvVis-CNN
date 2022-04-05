@@ -1,0 +1,6 @@
+numpy~=1.19.5
+foolbox~=3.3.3
+matplotlib~=3.4.3
+tensorflow~=2.7.0
+tensorflow-cpu~=2.6.0
+notebook~=6.4.6

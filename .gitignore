@@ -11,3 +11,8 @@ dist/
 deploy-gh-page.sh
 local-build/
 tiny-vgg/data/
+tiny-vgg/*.h5
+tiny-vgg/model.json
+tiny-vgg/*.bin
+adver-sample/data/
+adver-sample/*.h5
