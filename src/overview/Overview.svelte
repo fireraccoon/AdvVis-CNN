@@ -187,7 +187,7 @@
   let selectedNodeIndex = -1;
   let isExitedFromDetailedView = true;
   let isExitedFromCollapse = true;
-  let customImageURL = null;
+  let customImageURLs = null;
 
   // Helper functions
   const selectedScaleLevelChanged = () => {
@@ -1191,7 +1191,7 @@
   const customImageClicked = () => {
 
     // Case 1: there is no custom image -> show the modal to get user input
-    if (customImageURL === null) {
+    if (customImageURLs === null) {
       modalInfo.show = true;
       modalInfo.preImage = selectedImage;
       modalStore.set(modalInfo);
@@ -1199,7 +1199,7 @@
 
     // Case 2: there is an existing custom image, not the focus -> switch to this image
     else if (selectedImage !== 'custom') {
-      let fakeEvent = {detail: {url: customImageURL}};
+      let fakeEvent = {detail: {urls: customImageURLs}};
       handleCustomImage(fakeEvent);
     }
 
@@ -1225,12 +1225,10 @@
 
   const handleCustomImage = async (event) => {
     // User gives a valid image URL
-    customImageURL = event.detail.url;
+    customImageURLs = event.detail.urls;
 
     // Re-compute the CNN using the new input image
-    [cnn, cnnAdver] = await constructCNNs(
-      [`PUBLIC_URL/assets/img/origin/${selectedImage}`, `PUBLIC_URL/assets/img/adversary/${selectedImage}`],
-      model);
+    [cnn, cnnAdver] = await constructCNNs(customImageURLs, model);
 
     // Ignore the flatten layer for now
     let flatten = cnn[cnn.length - 2];
@@ -1546,7 +1544,7 @@
             data-imageName="custom"/>
 
           <span class="fa-stack edit-icon"
-            class:hidden={customImageURL === null}>
+            class:hidden={customImageURLs === null}>
             <i class="fas fa-circle fa-stack-2x"></i>
             <i class="fas fa-pen fa-stack-1x fa-inverse"></i>
           </span>

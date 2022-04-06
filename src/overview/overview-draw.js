@@ -362,10 +362,10 @@ const drawLegends = (legends, legendHeight) => {
     .attr('transform', `translate(0, ${legendHeight - 3})`)
     .call(outputLegendAxis);
 
-  outputLegend.append('rect')
-    .attr('width', nodeLength)
-    .attr('height', legendHeight)
-    .style('fill', 'gray');
+  // outputLegend.append('rect')
+  //   .attr('width', nodeLength)
+  //   .attr('height', legendHeight)
+  //   .style('fill', 'gray');
   
   // Add input image legend
   let inputScale = d3.scaleLinear()
