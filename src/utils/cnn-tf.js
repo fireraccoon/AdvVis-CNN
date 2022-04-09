@@ -1,4 +1,4 @@
-/* global tf */
+import * as tf from '@tensorflow/tfjs';
 
 // Network input image size
 const networkInputSize = 64;
