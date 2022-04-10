@@ -1,10 +1,10 @@
 <script>
 	import PoolAnimator from './PoolAnimator.svelte';
   import { singleMaxPooling } from '../utils/cnn.js';
+  import { array1d, generateOutputMappings,
+    compute_input_multiplies_with_weight
+  } from './DetailviewUtils.js';
   import { createEventDispatcher } from 'svelte';
-
-  let origin_animator;
-  let adversary_animator;
 
   export let input;
   export let inputAdver;
@@ -31,17 +31,28 @@
     }
   }
   
+  const padding = 0;
+  let padded_input_size = input.length + padding * 2;
+  $: padded_input_size = input.length + padding * 2;
+
+  let inputHighlights = [];
+  let outputHighlights = array1d(outputFinal.length * outputFinal.length, (i) => true);
+
   function handleClickPause() {
     isPaused = !isPaused;
-    console.log(isPaused)
   }
 
   function handlePauseFromInteraction(event) {
     isPaused = event.detail.isPaused;
-    d3.select(event.detail.adversary ? origin_animator : adversary_animator)
-      .select(`#grid > svg > .row:nth-child(${event.detail.hoverH + 1}) > 
-        .square:nth-child(${event.detail.hoverW + 1})`)
-      .dispatch("follow-mouseover");
+  }
+
+  const highlightsUpdateHandler = (event) => {
+    const animatedH = event.detail.hoverH;
+    const animatedW = event.detail.hoverW;
+    let outputMappings = generateOutputMappings(stride, outputFinal, kernelLength, padded_input_size, dilation);
+    outputHighlights = array1d(outputFinal.length * outputFinal.length, (i) => false);
+    outputHighlights[animatedH * outputFinal.length + animatedW] = true;
+    inputHighlights = compute_input_multiplies_with_weight(animatedH, animatedW, padded_input_size, kernelLength, outputMappings, kernelLength);
   }
 
   function handleClickX() {
@@ -191,18 +202,18 @@
 
       </div>
 
-      <div class="container is-centered is-vcentered" bind:this={origin_animator}>
+      <div class="container is-centered is-vcentered">
         <PoolAnimator on:message={handlePauseFromInteraction} 
-          kernelLength={kernelLength} image={input} output={outputFinal} 
-          stride={stride} dilation={dilation} isPaused={isPaused}
-          dataRange={dataRange} />
+          on:highlightsUpdate={highlightsUpdateHandler}
+          {kernelLength} image={input} output={outputFinal} {stride} {isPaused}
+          {dataRange} {inputHighlights} {outputHighlights}/>
       </div>
 
-      <div class="container is-centered is-vcentered" bind:this={adversary_animator}>
+      <div class="container is-centered is-vcentered">
         <PoolAnimator on:message={handlePauseFromInteraction} 
-          kernelLength={kernelLength} image={inputAdver} output={outputAdverFinal} 
-          stride={stride} dilation={dilation} isPaused={isPaused}
-          dataRange={dataRange} adversary/>
+          on:highlightsUpdate={highlightsUpdateHandler}
+          {kernelLength} image={inputAdver} output={outputAdverFinal} {stride} {isPaused}
+          {dataRange} {inputHighlights} {outputHighlights} adversary/>
       </div>
 
       <div class="annotation">

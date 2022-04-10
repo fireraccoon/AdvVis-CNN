@@ -913,7 +913,8 @@ export const updateCNNLayerRanges = () => {
   cnnLayerRanges.local = cnnLayerRangesLocal;
   cnnLayerRanges.module = cnnLayerRangesComponent;
   cnnLayerRanges.global = cnnLayerRangesGlobal;
-  cnnLayerRanges.output = [0, d3.max(cnn[cnn.length - 1].map(d => d.output))];
+  cnnLayerRanges.output = [0, d3.max(cnn[cnn.length - 1]
+    .concat(cnnAdver[cnnAdver.length - 1]).map(d => d.output))];
 
   cnnLayerRangesStore.set(cnnLayerRanges);
   cnnLayerMinMaxStore.set(cnnLayerMinMax);

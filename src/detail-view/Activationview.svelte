@@ -1,9 +1,7 @@
 <script>
 	import ActivationAnimator from './ActivationAnimator.svelte';
   import { createEventDispatcher } from 'svelte';
-
-  let origin_animator;
-  let adversary_animator;
+  import { array1d } from './DetailviewUtils.js';
 
   export let input;
   export let inputAdver;
@@ -15,16 +13,24 @@
   const dispatch = createEventDispatcher();
   let isPaused = false;
   
+  let inputHighlights = array1d(input.length * input.length, (i) => true);
+  let outputHighlights = array1d(output.length * output.length, (i) => true);
+  
   function handleClickPause() {
     isPaused = !isPaused;
   }
 
   function handlePauseFromInteraction(event) {
     isPaused = event.detail.isPaused;
-    d3.select(event.detail.adversary ? origin_animator : adversary_animator)
-      .select(`#grid > svg > .row:nth-child(${event.detail.hoverH + 1}) > 
-        .square:nth-child(${event.detail.hoverW + 1})`)
-      .dispatch("follow-mouseover");
+  }
+
+  const highlightsUpdateHandler  = (event) => {
+    const animatedH = event.detail.hoverH;
+    const animatedW = event.detail.hoverW;
+    outputHighlights = array1d(output.length * output.length, (i) => false);
+    inputHighlights = array1d(input.length * input.length, (i) => undefined);
+    outputHighlights[animatedH * output.length + animatedW] = true;
+    inputHighlights[animatedH * output.length + animatedW] = true;
   }
 
   function handleClickX() {
@@ -130,16 +136,18 @@
 
       </div>
 
-      <div class="container is-centered is-vcentered" bind:this={origin_animator}>
+      <div class="container is-centered is-vcentered">
         <ActivationAnimator on:message={handlePauseFromInteraction} 
-          image={input} output={output} isPaused={isPaused}
-          dataRange={dataRange}/>
+          on:highlightsUpdate={highlightsUpdateHandler}
+          image={input} {output} {isPaused} {dataRange}
+          {inputHighlights} {outputHighlights}/>
       </div>
       
-      <div class="container is-centered is-vcentered" bind:this={adversary_animator}>
+      <div class="container is-centered is-vcentered">
         <ActivationAnimator on:message={handlePauseFromInteraction} 
-          image={inputAdver} output={outputAdver} isPaused={isPaused}
-          dataRange={dataRange} adversary/>
+          on:highlightsUpdate={highlightsUpdateHandler}
+          image={inputAdver} output={outputAdver} {isPaused} {dataRange}
+          {inputHighlights} {outputHighlights} adversary/>
       </div>
 
       <div class="annotation">

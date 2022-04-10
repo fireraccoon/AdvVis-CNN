@@ -65,21 +65,6 @@
             hoverW: Math.min(Math.floor(d.col / 1), outputLength - 1)
           });
         }
-      })
-      .on('follow-mouseover', d => {
-        if (data.length != outputLength) {
-          dispatch('message', {
-            hoverH: Math.min(Math.floor(d.row / stride), outputLength - 1),
-            hoverW: Math.min(Math.floor(d.col / stride), outputLength - 1),
-            trigger: true
-          });
-        } else {
-          dispatch('message', {
-            hoverH: Math.min(Math.floor(d.row / 1), outputLength - 1),
-            hoverW: Math.min(Math.floor(d.col / 1), outputLength - 1),
-            trigger: true
-          });
-        }
       });
     if (isKernelMath) {
       var text = row.selectAll(".text")

@@ -1,10 +1,10 @@
 <script>
 	import ConvolutionAnimator from './ConvolutionAnimator.svelte';
   import { singleConv } from '../utils/cnn.js';
+  import { array1d, generateOutputMappings,
+    compute_input_multiplies_with_weight
+  } from './DetailviewUtils.js';
   import { createEventDispatcher } from 'svelte';
-
-  let origin_animator;
-  let adversary_animator;
 
   export let input;
   export let inputAdver;
@@ -14,7 +14,6 @@
   export let isInputInputLayer = false;
   export let isExited = false;
   // export let output;
-  
   const dispatch = createEventDispatcher();
 	let stride = 1;
   const dilation = 1;
@@ -30,6 +29,13 @@
     }
   }
   
+  const padding = 0;
+  let padded_input_size = input.length + padding * 2;
+  $: padded_input_size = input.length + padding * 2;
+
+  let inputHighlights = [];
+  let outputHighlights = array1d(outputFinal.length * outputFinal.length, (i) => true);
+
   function handleClickPause() {
     isPaused = !isPaused;
   }
@@ -43,10 +49,15 @@
 
   function handlePauseFromInteraction(event) {
     isPaused = event.detail.isPaused;
-    d3.select(event.detail.adversary ? origin_animator : adversary_animator)
-      .select(`#grid > svg > .row:nth-child(${event.detail.hoverH + 1}) > 
-        .square:nth-child(${event.detail.hoverW + 1})`)
-      .dispatch("follow-mouseover");
+  }
+
+  const highlightsUpdateHandler = (event) => {
+    const animatedH = event.detail.hoverH;
+    const animatedW = event.detail.hoverW;
+    let outputMappings = generateOutputMappings(stride, outputFinal, kernel.length, padded_input_size, dilation);
+    outputHighlights = array1d(outputFinal.length * outputFinal.length, (i) => false);
+    outputHighlights[animatedH * outputFinal.length + animatedW] = true;
+    inputHighlights = compute_input_multiplies_with_weight(animatedH, animatedW, padded_input_size, kernel.length, outputMappings, kernel.length);
   }
 
   function handleClickX() {
@@ -161,20 +172,20 @@
         </div>
       </div>
 
-      <div class="container is-centered" bind:this={origin_animator}>
+      <div class="container is-centered">
         <ConvolutionAnimator on:message={handlePauseFromInteraction} 
-          kernel={kernel} image={input} output={outputFinal} 
-          stride={stride} dilation={dilation} isPaused={isPaused}
-          dataRange={dataRange} colorScale={colorScale}
-          isInputInputLayer={isInputInputLayer} />
+          on:highlightsUpdate={highlightsUpdateHandler}
+          {kernel} image={input} output={outputFinal}
+          {stride} {isPaused} {inputHighlights} {outputHighlights}
+          {dataRange} {colorScale} {isInputInputLayer} />
       </div>
 
-      <div class="container is-centered" bind:this={adversary_animator}>
+      <div class="container is-centered">
         <ConvolutionAnimator on:message={handlePauseFromInteraction} 
-          kernel={kernel} image={inputAdver} output={outputAdverFinal} 
-          stride={stride} dilation={dilation} isPaused={isPaused}
-          dataRange={dataRange} colorScale={colorScale}
-          isInputInputLayer={isInputInputLayer} adversary/>
+          on:highlightsUpdate={highlightsUpdateHandler}
+          {kernel} image={inputAdver} output={outputAdverFinal}
+          {stride} {isPaused} {inputHighlights} {outputHighlights}
+          {colorScale} {dataRange} {isInputInputLayer} adversary/>
       </div>
 
       <div class="annotation">

@@ -1,7 +1,7 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
-  import { array1d, getMatrixSliceFromOutputHighlights,
-    getVisualizationSizeConstraint, getMatrixSliceFromInputHighlights, gridData
+  import { createEventDispatcher, onDestroy } from 'svelte';
+  import { getMatrixSliceFromOutputHighlights, gridData,
+    getVisualizationSizeConstraint, getMatrixSliceFromInputHighlights
   } from './DetailviewUtils.js';
   import Dataview from './Dataview.svelte';
 
@@ -10,76 +10,58 @@
   export let adversary = false;
   export let isPaused;
   export let dataRange;
+  export let inputHighlights;
+  export let outputHighlights;
 
   const dispatch = createEventDispatcher();
-  const padding = 0;
-  let padded_input_size = image.length + padding * 2;
-  $: padded_input_size = image.length + padding * 2;
 
   let gridInputMatrixSlice = gridData([[0]]);
   let gridOutputMatrixSlice = gridData([[0]]);
-  let inputHighlights = array1d(image.length * image.length, (i) => true);
-  let outputHighlights = array1d(output.length * output.length, (i) => true);
   let interval;
-  $ : {
-    let inputHighlights = array1d(image.length * image.length, (i) => true);
-    let outputHighlights = array1d(output.length * output.length, (i) => true);
-    let interval;
-  }
+  $ : inputHighlights, outputHighlights, updateMatrixSlice();
 
   let counter;
 
   // lots of replication between mouseover and start-relu. TODO: fix this.
   function startRelu() {
     counter = 0;
+    dispatch('message', { isPaused: false });
     if (interval) clearInterval(interval);
     interval = setInterval(() => {
       if (isPaused) return;
       const flat_animated = counter % (output.length * output.length);
-      outputHighlights = array1d(output.length * output.length, (i) => false);
-      inputHighlights = array1d(image.length * image.length, (i) => undefined);
-      const animatedH = Math.floor(flat_animated / output.length);
-      const animatedW = flat_animated % output.length;
-      outputHighlights[animatedH * output.length + animatedW] = true;
-      inputHighlights[animatedH * output.length + animatedW] = true;
-      const inputMatrixSlice = getMatrixSliceFromInputHighlights(image, inputHighlights, 1);
-      gridInputMatrixSlice = gridData(inputMatrixSlice);
-      const outputMatrixSlice = getMatrixSliceFromOutputHighlights(output, outputHighlights);
-      gridOutputMatrixSlice = gridData(outputMatrixSlice);
+      dispatch("highlightsUpdate", {
+        hoverH: Math.floor(flat_animated / output.length),
+        hoverW: flat_animated % output.length
+      });
       counter++;
     }, 250)
   }
 
   function handleMouseover(event) {
-    outputHighlights = array1d(output.length * output.length, (i) => false);
-    const animatedH = event.detail.hoverH;
-    const animatedW = event.detail.hoverW;
-    outputHighlights[animatedH * output.length + animatedW] = true;
-    inputHighlights = array1d(image.length * image.length, (i) => undefined);
-    inputHighlights[animatedH * output.length + animatedW] = true;
+    dispatch("highlightsUpdate", {
+      hoverH: event.detail.hoverH,
+      hoverW: event.detail.hoverW
+    });
+    dispatch('message', { isPaused: true });
+  }
+
+  const updateMatrixSlice = () => {
     const inputMatrixSlice = getMatrixSliceFromInputHighlights(image, inputHighlights, 1);
     gridInputMatrixSlice = gridData(inputMatrixSlice);
     const outputMatrixSlice = getMatrixSliceFromOutputHighlights(output, outputHighlights);
     gridOutputMatrixSlice = gridData(outputMatrixSlice);
-    isPaused = true;
-    if (!event.detail.trigger) {
-      dispatch('message', {
-        isPaused: isPaused,
-        adversary: adversary,
-        hoverH: animatedH,
-        hoverW: animatedW
-      });
-    }
   }
 
-  startRelu();
-  let gridImage = gridData(image)
-  let gridOutput = gridData(output)
+  if (!adversary) startRelu();
+  let gridImage = gridData(image);
+  let gridOutput = gridData(output);
   $ : {
-    startRelu();
-    gridImage = gridData(image)
-    gridOutput = gridData(output)
+    if (!adversary) startRelu();
+    gridImage = gridData(image);
+    gridOutput = gridData(output);
   }
+  onDestroy(() => interval ? clearInterval(interval) : void(0));
 </script>
 
 <style>
