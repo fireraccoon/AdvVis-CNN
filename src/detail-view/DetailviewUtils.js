@@ -101,3 +101,82 @@ export function gridData(image, constraint=getVisualizationSizeConstraint(image.
   }
   return data;
 }
+
+/**
+ * Compute all input indexs with output index
+ * (the result is computed with padding).
+ * @param {[Number, Number]} outputIndex Index of the output element
+ * @param {Number} kernelLength Length of the kernel
+ * @param {Number} stride The stride
+ * @param {Number} padding The padding
+ * @returns {[[Number, Number]]} All input indexs
+ */
+export const compute_input_index_with_output_index = (outputIndex, kernelLength, stride, padding=0) => {
+  console.assert(outputIndex.length === 2, "Input index could be a array of shape 2.");
+  let inputIndex_1st = outputIndex.map(d => d * stride);
+  return array1d(kernelLength * kernelLength, i => [
+    inputIndex_1st[0] + Math.floor(i / kernelLength),
+    inputIndex_1st[1] + i % kernelLength
+  ]);
+}
+
+/**
+ * Compute output index with input index
+ * (the result is computed with padding).
+ * @param {[Number, Number]} inputIndex Index of the 1st element of the input map
+ * @param {Number} kernelLength Length of the kernel
+ * @param {Number} stride The stride
+ * @param {Number} padding The padding
+ * @returns {[[Number, Number]]} Index of the output element 
+ */
+export const compute_output_index_with_input_index = (inputIndex, kernelLength, stride, padding=0) => {
+  console.assert(inputIndex.length === 2, "Input index could be a array of shape 2.");
+  return [inputIndex];
+}
+
+export const get_matrix_slice_from_highlights_index = (image, highlightsIndex) => {
+  let kernelLength = Math.sqrt(highlightsIndex.length);
+  console.assert(kernelLength % 1 === 0, "Illegal highlights index.");
+  return array2d(kernelLength, kernelLength, (i, j) => {
+    let curIndex = highlightsIndex[i * kernelLength + j];
+    return image[curIndex[0]][curIndex[1]];
+  });
+}
+
+/**
+ * 
+ * @param {[[Number]]} diffs 
+ * @param {Number} stressBorderMax 
+ * @param {Number} stressBorderMin 
+ * @returns {[[Number]]}
+ */
+export const getDeltaStressIndex = (diffs, stressBorderMin, stressBorderMax) => {
+  let stressIndex = [];
+  diffs.forEach((d, i) => {
+    d.forEach((dd, ii) => {
+      if (dd <= stressBorderMax && dd > stressBorderMin) {
+        stressIndex.push([i, ii]);
+      }
+    });
+  });
+  return stressIndex;
+}
+
+/**
+ * 
+ * @param {[[Number]]} originImage 
+ * @param {[[Number]]} adversaryImage
+ * @returns {[[[Number]], {min: Number, max: Number}]} 
+ */
+export const get_single_conv_diff_Ranges = (originImage, adversaryImage) => {
+  console.assert(adversaryImage.length === originImage.length, "Shapes could be the same.");
+  let ranges = { min: Infinity, max: -Infinity };
+  return [originImage.map((d, i) => 
+    d.map((dd, ii) => {
+      let diff = Math.abs(dd - adversaryImage[i][ii]);
+      ranges.min = Math.min(ranges.min, diff);
+      ranges.max = Math.max(ranges.max, diff);
+      return diff;
+    })
+  ), ranges];
+}

@@ -1,42 +1,44 @@
 <script>
 	import PoolAnimator from './PoolAnimator.svelte';
-  import { singleMaxPooling } from '../utils/cnn.js';
-  import { array1d, generateOutputMappings,
-    compute_input_multiplies_with_weight
+  import Slider from '../components/Slider.svelte';
+  import { array1d, compute_output_index_with_input_index,
+    compute_input_index_with_output_index
   } from './DetailviewUtils.js';
   import { createEventDispatcher } from 'svelte';
 
   export let input;
   export let inputAdver;
+  export let output;
+  export let outputAdver;
   export let kernelLength;
   export let dataRange;
+  export let samplesDifferences;
+  export let samplesDifferenceRanges;
   export let isExited;
   
   const dispatch = createEventDispatcher();
-  // let isExited = false;
 	let stride = 2;
   const dilation = 1;
   var isPaused = false;
-  var outputFinal = singleMaxPooling(input);
-  var outputAdverFinal = singleMaxPooling(inputAdver);
-  // let dragging = false;
-  // let dragInfo = {x1: 0, x2: 0, y1: 0, y2: 0};
-  // let detailView = d3.select('#detailview').node();
-  $: if (stride > 0) {
-    try { 
-      outputFinal = singleMaxPooling(input);
-      outputAdverFinal = singleMaxPooling(inputAdver);
-    } catch {
-      console.log("Cannot handle stride of " + stride);
-    }
-  }
   
   const padding = 0;
-  let padded_input_size = input.length + padding * 2;
   $: padded_input_size = input.length + padding * 2;
 
-  let inputHighlights = [];
-  let outputHighlights = array1d(outputFinal.length * outputFinal.length, (i) => true);
+  let inputHighlightsIndex, outputHighlightsIndex;
+  $: {
+    inputHighlightsIndex = array1d(kernelLength * kernelLength,
+      i => [Math.floor(i / kernelLength), i % kernelLength]);
+    outputHighlightsIndex = [[0, 0]];
+  }
+
+  let stressRanges, stressBounder;
+  $: {
+    stressRanges = [
+      Math.min(samplesDifferenceRanges.prev.min, samplesDifferenceRanges.next.min),
+      Math.max(samplesDifferenceRanges.prev.max, samplesDifferenceRanges.next.max)
+    ];
+    stressBounder = (stressRanges[0] + stressRanges[1]) * 0.5;
+  }
 
   function handleClickPause() {
     isPaused = !isPaused;
@@ -47,12 +49,9 @@
   }
 
   const highlightsUpdateHandler = (event) => {
-    const animatedH = event.detail.hoverH;
-    const animatedW = event.detail.hoverW;
-    let outputMappings = generateOutputMappings(stride, outputFinal, kernelLength, padded_input_size, dilation);
-    outputHighlights = array1d(outputFinal.length * outputFinal.length, (i) => false);
-    outputHighlights[animatedH * outputFinal.length + animatedW] = true;
-    inputHighlights = compute_input_multiplies_with_weight(animatedH, animatedW, padded_input_size, kernelLength, outputMappings, kernelLength);
+    const animatedIndex = [event.detail.hoverH, event.detail.hoverW];
+    inputHighlightsIndex = compute_input_index_with_output_index(animatedIndex, kernelLength, stride);
+    outputHighlightsIndex = compute_output_index_with_input_index(animatedIndex, kernelLength, stride);
   }
 
   function handleClickX() {
@@ -66,6 +65,10 @@
     let scroll = new SmoothScroll('a[href*="#"]', {offset: -svgHeight});
     let anchor = document.querySelector(`#article-pooling`);
     scroll.animateScroll(anchor);
+  }
+
+  const sliderChangeHandler = (event) => {
+    stressBounder = event.detail.value;
   }
 
   // Test dragging detail view, need more work
@@ -205,16 +208,20 @@
       <div class="container is-centered is-vcentered">
         <PoolAnimator on:message={handlePauseFromInteraction} 
           on:highlightsUpdate={highlightsUpdateHandler}
-          {kernelLength} image={input} output={outputFinal} {stride} {isPaused}
-          {dataRange} {inputHighlights} {outputHighlights}/>
+          {kernelLength} image={input} output={output} {stride} {isPaused}
+          {dataRange} {inputHighlightsIndex} {outputHighlightsIndex}
+          {stressBounder} {samplesDifferences}/>
       </div>
 
       <div class="container is-centered is-vcentered">
         <PoolAnimator on:message={handlePauseFromInteraction} 
           on:highlightsUpdate={highlightsUpdateHandler}
-          {kernelLength} image={inputAdver} output={outputAdverFinal} {stride} {isPaused}
-          {dataRange} {inputHighlights} {outputHighlights} adversary/>
+          {kernelLength} image={inputAdver} output={outputAdver} {stride} {isPaused}
+          {dataRange} {inputHighlightsIndex} {outputHighlightsIndex}
+          {stressBounder} {samplesDifferences} adversary/>
       </div>
+
+      <Slider value={stressBounder} ranges={stressRanges} on:message={sliderChangeHandler}/>
 
       <div class="annotation">
         <img src='PUBLIC_URL/assets/img/pointer.svg' alt='pointer icon'>

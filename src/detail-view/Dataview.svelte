@@ -1,6 +1,6 @@
 <script>
   export let data;
-  export let highlights;
+  export let highlightsIndex = [];
   export let isKernelMath;
   export let constraint;
   export let dataRange;
@@ -8,22 +8,28 @@
   export let stride = undefined;
   export let colorScale = d3.interpolateRdBu;
   export let isInputLayer = false;
+  export let samplesDifference = undefined;
+  export let stressBounder = undefined;
 
-  import { onMount } from 'svelte';
-  import { onDestroy } from 'svelte';
-  import { beforeUpdate, afterUpdate } from 'svelte';
   import { createEventDispatcher } from 'svelte';
+  import { getDeltaStressIndex } from './DetailviewUtils'
 
   let grid_final;
   const textConstraintDivisor = 2.6;
   const standardCellColor = "ddd";
   const dispatch = createEventDispatcher();
 
-  let oldHighlight = highlights;
-  let oldData = data;
+  let oldHighlightsIndex;
+  let oldStressBounder;
+  let highlightUnitsLastStates;
+
+  $: data, grid_final && redraw();
+  $: stressBounder, data, grid_final && !isKernelMath && redrawStressUnits();
+  $: highlightsIndex, grid_final && updateHighLights();
 
   const redraw = () => {
     d3.select(grid_final).selectAll("#grid > *").remove();
+    highlightUnitsLastStates = Array.from({length: highlightsIndex.length}, () => "none");
     const constrainedSvgSize = data.length * constraint + 2;
     var grid = d3.select(grid_final).select("#grid")
       .attr("width", constrainedSvgSize + "px")
@@ -92,27 +98,55 @@
         .text(function(d) {
           return d.text.toString().replace('-', '－');
         })
+      column = column.style("stroke", "black");
     }
+    oldStressBounder = Infinity;
+    oldHighlightsIndex = highlightsIndex;
   }
 
-  afterUpdate(() => {
-    if (data != oldData) {
-      redraw();
-      oldData = data;
+  const redrawStressUnits = () => {
+    let stressUnitsIndex, border;
+    if (stressBounder < oldStressBounder) {
+      stressUnitsIndex = getDeltaStressIndex(samplesDifference, stressBounder, oldStressBounder);
+      border = "red";
+    } else {
+      stressUnitsIndex = getDeltaStressIndex(samplesDifference, oldStressBounder, stressBounder);
+      border = "none";
     }
+    stressUnitsIndex.forEach(d => {
+      d3.select(grid_final).select('#grid > svg')
+        .select(`.row:nth-child(${d[0] + 1}) .square:nth-child(${d[1] + 1})`)
+        .style("stroke", border);
+    });
+    let element, strokeStyle;
+    highlightsIndex.forEach((d, i) => {
+      element = d3.select(grid_final).select('#grid > svg')
+        .select(`.row:nth-child(${d[0] + 1}) .square:nth-child(${d[1] + 1})`);
+      strokeStyle = element.style("stroke");
+      highlightUnitsLastStates[i] = (strokeStyle === "black" ? highlightUnitsLastStates[i] : strokeStyle);
+      element.style("stroke", "black");
+    });
+    oldStressBounder = stressBounder;
+  }
 
-    if (highlights != oldHighlight) {
-      var grid = d3.select(grid_final).select('#grid').select("svg")
-      grid.selectAll(".square")
-        .style("stroke", (d) => isKernelMath || (highlights.length && highlights[d.row * data.length + d.col]) ? "black" : null )
-      oldHighlight = highlights;
+  const updateHighLights = () => {
+    if (highlightsIndex != oldHighlightsIndex) {
+      oldHighlightsIndex.forEach((d, i) => {
+        d3.select(grid_final).select('#grid > svg')
+          .select(`.row:nth-child(${d[0] + 1}) .square:nth-child(${d[1] + 1})`)
+          .style("stroke", highlightUnitsLastStates[i]);
+      });
+      oldHighlightsIndex = highlightsIndex;
+      let element;
+      highlightUnitsLastStates = [];
+      highlightsIndex.forEach(d => {
+        element = d3.select(grid_final).select('#grid > svg')
+          .select(`.row:nth-child(${d[0] + 1}) .square:nth-child(${d[1] + 1})`);
+        highlightUnitsLastStates.push(element.style("stroke"));
+        element.style("stroke", "black");
+      });
     }
-
-  });
-
-  onMount(() => {
-    redraw();
-  });
+  }
 
 </script>
 

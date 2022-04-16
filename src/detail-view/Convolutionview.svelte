@@ -1,8 +1,9 @@
 <script>
 	import ConvolutionAnimator from './ConvolutionAnimator.svelte';
+  import Slider from '../components/Slider.svelte';
   import { singleConv } from '../utils/cnn.js';
-  import { array1d, generateOutputMappings,
-    compute_input_multiplies_with_weight
+  import { array1d, compute_output_index_with_input_index,
+    compute_input_index_with_output_index, get_single_conv_diff_Ranges
   } from './DetailviewUtils.js';
   import { createEventDispatcher } from 'svelte';
 
@@ -12,29 +13,44 @@
   export let dataRange;
   export let colorScale = d3.interpolateRdBu;
   export let isInputInputLayer = false;
+  export let samplesDifferences;
+  export let samplesDifferenceRanges;
   export let isExited = false;
   // export let output;
   const dispatch = createEventDispatcher();
 	let stride = 1;
   const dilation = 1;
   var isPaused = false;
-  var outputFinal = singleConv(input, kernel, stride);
-  var outputAdverFinal = singleConv(inputAdver, kernel, stride);
+  var outputFinal, outputAdverFinal;
   $: if (stride > 0) {
-    try { 
+    try {
       outputFinal = singleConv(input, kernel, stride);
       outputAdverFinal = singleConv(inputAdver, kernel, stride);
     } catch {
       console.log("Cannot handle stride of " + stride);
     }
+    [samplesDifferences.next, samplesDifferenceRanges.next] =
+      get_single_conv_diff_Ranges(outputFinal, outputAdverFinal);
   }
   
   const padding = 0;
-  let padded_input_size = input.length + padding * 2;
   $: padded_input_size = input.length + padding * 2;
 
-  let inputHighlights = [];
-  let outputHighlights = array1d(outputFinal.length * outputFinal.length, (i) => true);
+  let inputHighlightsIndex, outputHighlightsIndex;
+  $: {
+    inputHighlightsIndex = array1d(kernel.length * kernel.length,
+      i => [Math.floor(i / kernel.length), i % kernel.length]);
+    outputHighlightsIndex = [[0, 0]];
+  }
+
+  let stressRanges, stressBounder;
+  $: {
+    stressRanges = [
+      Math.min(samplesDifferenceRanges.prev.min, samplesDifferenceRanges.next.min),
+      Math.max(samplesDifferenceRanges.prev.max, samplesDifferenceRanges.next.max)
+    ];
+    stressBounder = (stressRanges[0] + stressRanges[1]) * 0.5;
+  }
 
   function handleClickPause() {
     isPaused = !isPaused;
@@ -52,12 +68,9 @@
   }
 
   const highlightsUpdateHandler = (event) => {
-    const animatedH = event.detail.hoverH;
-    const animatedW = event.detail.hoverW;
-    let outputMappings = generateOutputMappings(stride, outputFinal, kernel.length, padded_input_size, dilation);
-    outputHighlights = array1d(outputFinal.length * outputFinal.length, (i) => false);
-    outputHighlights[animatedH * outputFinal.length + animatedW] = true;
-    inputHighlights = compute_input_multiplies_with_weight(animatedH, animatedW, padded_input_size, kernel.length, outputMappings, kernel.length);
+    const animatedIndex = [event.detail.hoverH, event.detail.hoverW];
+    inputHighlightsIndex = compute_input_index_with_output_index(animatedIndex, kernel.length, stride);
+    outputHighlightsIndex = compute_output_index_with_input_index(animatedIndex, kernel.length, stride);
   }
 
   function handleClickX() {
@@ -66,6 +79,11 @@
       text: isExited
     });
   }
+
+  const sliderChangeHandler = (event) => {
+    stressBounder = event.detail.value;
+  }
+
 </script>
 
 <style>
@@ -176,17 +194,21 @@
         <ConvolutionAnimator on:message={handlePauseFromInteraction} 
           on:highlightsUpdate={highlightsUpdateHandler}
           {kernel} image={input} output={outputFinal}
-          {stride} {isPaused} {inputHighlights} {outputHighlights}
-          {dataRange} {colorScale} {isInputInputLayer} />
+          {stride} {isPaused} {inputHighlightsIndex} {outputHighlightsIndex}
+          {dataRange} {colorScale} {isInputInputLayer} {stressBounder}
+          {samplesDifferences}/>
       </div>
 
       <div class="container is-centered">
         <ConvolutionAnimator on:message={handlePauseFromInteraction} 
           on:highlightsUpdate={highlightsUpdateHandler}
           {kernel} image={inputAdver} output={outputAdverFinal}
-          {stride} {isPaused} {inputHighlights} {outputHighlights}
-          {colorScale} {dataRange} {isInputInputLayer} adversary/>
+          {stride} {isPaused} {inputHighlightsIndex} {outputHighlightsIndex}
+          {colorScale} {dataRange} {isInputInputLayer} {stressBounder}
+          {samplesDifferences} adversary/>
       </div>
+
+      <Slider value={stressBounder} ranges={stressRanges} on:message={sliderChangeHandler}/>
 
       <div class="annotation">
         <img src='PUBLIC_URL/assets/img/pointer.svg' alt='pointer icon'>

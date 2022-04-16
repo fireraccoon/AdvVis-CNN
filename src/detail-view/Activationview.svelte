@@ -1,20 +1,31 @@
 <script>
 	import ActivationAnimator from './ActivationAnimator.svelte';
+  import Slider from '../components/Slider.svelte';
   import { createEventDispatcher } from 'svelte';
-  import { array1d } from './DetailviewUtils.js';
 
   export let input;
   export let inputAdver;
   export let output;
   export let outputAdver;
   export let dataRange;
+  export let samplesDifferences;
+  export let samplesDifferenceRanges;
   export let isExited;
 
   const dispatch = createEventDispatcher();
   let isPaused = false;
-  
-  let inputHighlights = array1d(input.length * input.length, (i) => true);
-  let outputHighlights = array1d(output.length * output.length, (i) => true);
+
+  let inputHighlightsIndex = [[0, 0]]
+  let outputHighlightsIndex = [[0, 0]];
+
+  let stressRanges, stressBounder;
+  $: {
+    stressRanges = [
+      Math.min(samplesDifferenceRanges.prev.min, samplesDifferenceRanges.next.min),
+      Math.max(samplesDifferenceRanges.prev.max, samplesDifferenceRanges.next.max)
+    ];
+    stressBounder = (stressRanges[0] + stressRanges[1]) * 0.5;
+  }
   
   function handleClickPause() {
     isPaused = !isPaused;
@@ -25,12 +36,9 @@
   }
 
   const highlightsUpdateHandler  = (event) => {
-    const animatedH = event.detail.hoverH;
-    const animatedW = event.detail.hoverW;
-    outputHighlights = array1d(output.length * output.length, (i) => false);
-    inputHighlights = array1d(input.length * input.length, (i) => undefined);
-    outputHighlights[animatedH * output.length + animatedW] = true;
-    inputHighlights[animatedH * output.length + animatedW] = true;
+    const animatedIndex = [event.detail.hoverH, event.detail.hoverW];
+    inputHighlightsIndex = [animatedIndex];
+    outputHighlightsIndex = [animatedIndex];
   }
 
   function handleClickX() {
@@ -45,6 +53,11 @@
     let anchor = document.querySelector(`#article-relu`);
     scroll.animateScroll(anchor);
   }
+
+  const sliderChangeHandler = (event) => {
+    stressBounder = event.detail.value;
+  }
+
 </script>
 
 <style>
@@ -140,15 +153,19 @@
         <ActivationAnimator on:message={handlePauseFromInteraction} 
           on:highlightsUpdate={highlightsUpdateHandler}
           image={input} {output} {isPaused} {dataRange}
-          {inputHighlights} {outputHighlights}/>
+          {inputHighlightsIndex} {outputHighlightsIndex}
+          {stressBounder} {samplesDifferences}/>
       </div>
       
       <div class="container is-centered is-vcentered">
         <ActivationAnimator on:message={handlePauseFromInteraction} 
           on:highlightsUpdate={highlightsUpdateHandler}
           image={inputAdver} output={outputAdver} {isPaused} {dataRange}
-          {inputHighlights} {outputHighlights} adversary/>
+          {inputHighlightsIndex} {outputHighlightsIndex}
+          {stressBounder} {samplesDifferences} adversary/>
       </div>
+
+      <Slider value={stressBounder} ranges={stressRanges} on:message={sliderChangeHandler}/>
 
       <div class="annotation">
         <img src='PUBLIC_URL/assets/img/pointer.svg' alt='pointer icon'>

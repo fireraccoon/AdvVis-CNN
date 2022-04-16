@@ -35,7 +35,7 @@
   } from './flatten-draw.js';
 
   import {
-    drawOutput, drawCNN, updateCNN, updateCNNLayerRanges, drawCustomImage
+    drawOutput, drawCNN, updateCNN, updateCNNLayerRanges, drawCustomImage, updateSamplesDiffRanges
   } from './overview-draw.js';
 
 
@@ -189,6 +189,9 @@
   let isExitedFromCollapse = true;
   let customImageURLs = null;
 
+  let samplesDifferences, samplesDifferenceRanges;
+  let updateSamplesDiffRangesAbortter;
+
   // Helper functions
   const selectedScaleLevelChanged = () => {
     if (svg !== undefined) {
@@ -314,6 +317,10 @@
       // Send the currently used color range to detailed view
       nodeData.colorRange = range;
       nodeData.inputIsInputLayer = curLayerIndex <= 1;
+      nodeData.samplesDifferences = {
+        prev: samplesDifferences[curLayerIndex - 1][selectedNodeIndex],
+        next: samplesDifferences[curLayerIndex][selectedNodeIndex]
+      };
     }
   }
 
@@ -828,6 +835,14 @@
       let curLayerIndex = layerIndexDict[d.layerName];
       data.colorRange = cnnLayerRanges[selectedScaleLevel][curLayerIndex];
       data.isInputInputLayer = curLayerIndex <= 1;
+      data.samplesDifferences = {
+        prev: samplesDifferences[curLayerIndex - 1][d.index],
+        next: samplesDifferences[curLayerIndex][d.index]
+      };
+      data.samplesDifferenceRanges = {
+        prev: samplesDifferenceRanges[selectedScaleLevel][curLayerIndex - 1],
+        next: samplesDifferenceRanges[selectedScaleLevel][curLayerIndex]
+      };
       nodeData = data;
     }
 
@@ -1139,6 +1154,12 @@
     // Create and draw the CNN view
     drawCNN(width, height, cnnGroup, nodeMouseOverHandler,
       nodeMouseLeaveHandler, nodeClickHandler);
+
+    updateSamplesDiffRangesAbortter = updateSamplesDiffRanges(data => {
+      samplesDifferences = data.diffs;
+      samplesDifferenceRanges = data.diffRanges;
+      console.log(data)
+    });
   })
 
   const detailedButtonClicked = () => {
@@ -1185,6 +1206,12 @@
       // Update all scales used in the CNN view
       updateCNNLayerRanges();
       updateCNN();
+
+      updateSamplesDiffRangesAbortter();
+      updateSamplesDiffRangesAbortter = updateSamplesDiffRanges(data => {
+        samplesDifferences = data.diffs;
+        samplesDifferenceRanges = data.diffRanges;
+      });
     }
   }
 
@@ -1247,6 +1274,12 @@
     // Update all scales used in the CNN view
     updateCNNLayerRanges();
     updateCNN();
+
+    updateSamplesDiffRangesAbortter();
+    updateSamplesDiffRangesAbortter = updateSamplesDiffRanges(data => {
+      samplesDifferences = data.diffs;
+      samplesDifferenceRanges = data.diffRanges;
+    });
   }
 
   function handleExitFromDetiledConvView(event) {
@@ -1614,6 +1647,8 @@
                       colorScale={nodeData.inputIsInputLayer ?
                         layerColorScales.input[0] : layerColorScales.conv}
                       isInputInputLayer={nodeData.inputIsInputLayer}
+                      samplesDifferences={nodeData.samplesDifferences}
+                      samplesDifferenceRanges={nodeData.samplesDifferenceRanges}
                       isExited={isExitedFromCollapse}/>
   {:else if selectedNode.data && selectedNode.data.type === 'relu'}
     <ActivationView on:message={handleExitFromDetiledActivationView} input={nodeData[0].input} 
@@ -1621,12 +1656,18 @@
                     output={nodeData[0].output}
                     outputAdver={nodeData[0].outputAdver}
                     dataRange={nodeData.colorRange}
+                    samplesDifferences={nodeData.samplesDifferences}
+                    samplesDifferenceRanges={nodeData.samplesDifferenceRanges}
                     isExited={isExitedFromDetailedView}/>
   {:else if selectedNode.data && selectedNode.data.type === 'pool'}
     <PoolView on:message={handleExitFromDetiledPoolView} input={nodeData[0].input} 
               inputAdver={nodeData[0].inputAdver}
+              output={nodeData[0].output}
+              outputAdver={nodeData[0].outputAdver}
               kernelLength={2}
               dataRange={nodeData.colorRange}
+              samplesDifferences={nodeData.samplesDifferences}
+              samplesDifferenceRanges={nodeData.samplesDifferenceRanges}
               isExited={isExitedFromDetailedView}/>
   {:else if softmaxDetailViewInfo.show}
     <SoftmaxView logits={softmaxDetailViewInfo.logits}

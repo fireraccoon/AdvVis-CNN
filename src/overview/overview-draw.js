@@ -919,3 +919,76 @@ export const updateCNNLayerRanges = () => {
   cnnLayerRangesStore.set(cnnLayerRanges);
   cnnLayerMinMaxStore.set(cnnLayerMinMax);
 }
+
+/**
+ * Update the difference between the adversarial samples and the
+ * original samples. Use Promise to avoid blocking rendering!
+ * @param {function} success function to resolve the promise 
+ * @param {function} fail function to reject the promise
+ * @return {function} function to abort the promise
+ */
+export const updateSamplesDiffRanges = (success, fail) => {
+  let abort;
+
+  new Promise((resolve, reject) => {
+    let diffs = [];
+    let diffRangesLocal = [], diffRangesModule = [], diffRangesGlobal = [];
+    let rangesLocal, rangesModule, rangesGlobal;
+    rangesGlobal = {min: Infinity, max: -Infinity};
+    rangesModule = {min: Infinity, max: -Infinity};
+
+    abort = reject;
+
+    for (let l = 0; l < cnn.length && cnn[l][0].type != 'fc'; l++) {
+      rangesLocal = {min: Infinity, max: -Infinity};
+
+      diffs.push(cnn[l].map((d, i) => {
+        if (d.output.length === undefined) {
+          reject(`Layer ${d.layerName} with error output.`);
+        }
+
+        return d.output.map((dd, ii) => {
+          if (dd.length !== undefined) {
+            return dd.map((ddd, iii) => {
+              let diff = Math.abs(ddd - cnnAdver[l][i].output[ii][iii]);
+              rangesLocal.min = Math.min(rangesLocal.min, diff);
+              rangesLocal.max = Math.max(rangesLocal.max, diff);
+              return diff;
+            });
+          } else {
+            let diff = Math.abs(dd - cnnAdver[l][i].output[ii]);
+            rangesLocal.min = Math.min(rangesLocal.min, diff);
+            rangesLocal.max = Math.max(rangesLocal.max, diff);
+            return diff;
+          }
+        });
+      }));
+
+      diffRangesLocal.push(rangesLocal);
+      diffRangesGlobal.push({});
+      rangesModule.min = Math.min(rangesLocal.min, rangesModule.min);
+      rangesModule.max = Math.max(rangesLocal.max, rangesModule.max);
+      rangesGlobal.min = Math.min(rangesLocal.min, rangesGlobal.min);
+      rangesGlobal.max = Math.max(rangesLocal.max, rangesGlobal.max);
+      if (!l || l % 5 === 4) {
+        let i = l ? 5 : 1;
+        while(i--) diffRangesModule.push(rangesModule);
+        rangesModule = {min: Infinity, max: -Infinity};
+      }
+    }
+    diffRangesGlobal = diffRangesGlobal.map(d => rangesGlobal);
+
+    resolve({
+      diffs: diffs,
+      diffRanges: {
+        local: diffRangesLocal,
+        module: diffRangesModule,
+        global: diffRangesGlobal
+      }
+    });
+  })
+  .then(data => success !== undefined ? success(data) : console.log(data))
+  .catch(err => fail !== undefined ? fail(err) : console.error(err));
+
+  return abort;
+}

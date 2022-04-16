@@ -1,7 +1,7 @@
 <script>
   import { createEventDispatcher, onDestroy } from 'svelte';
-  import { getMatrixSliceFromOutputHighlights, getDataRange, gridData,
-    getVisualizationSizeConstraint, getMatrixSliceFromInputHighlights
+  import { getDataRange, gridData, getVisualizationSizeConstraint,
+    get_matrix_slice_from_highlights_index
   } from './DetailviewUtils.js';
   import Dataview from './Dataview.svelte';
   import KernelMathView from './KernelMathView.svelte';
@@ -16,9 +16,11 @@
   export let isPaused;
   export let dataRange;
   export let colorScale;
-  export let inputHighlights;
-  export let outputHighlights;
+  export let inputHighlightsIndex;
+  export let outputHighlightsIndex;
   export let isInputInputLayer = false;
+  export let samplesDifferences;
+  export let stressBounder;
 
   const dispatch = createEventDispatcher();
 
@@ -33,9 +35,9 @@
   testInputMatrixSlice = gridData(testInputMatrixSlice)
   let testOutputMatrixSlice = gridData([0]);
 
-  let interval;
-  $ : inputHighlights, outputHighlights, updateMatrixSlice();
+  $: inputHighlightsIndex, outputHighlightsIndex, updateMatrixSlice();
 
+  let interval;
   let counter;
   // lots of replication between mouseover and start-conv. TODO: fix this.
   function startConvolution(stride) {
@@ -63,16 +65,15 @@
   }
 
   const updateMatrixSlice = () => {
-    const inputMatrixSlice = getMatrixSliceFromInputHighlights(image, inputHighlights, kernel.length);
+    const inputMatrixSlice = get_matrix_slice_from_highlights_index(image, inputHighlightsIndex);
     testInputMatrixSlice = gridData(inputMatrixSlice);
-    const outputMatrixSlice = getMatrixSliceFromOutputHighlights(output, outputHighlights);
+    const outputMatrixSlice = get_matrix_slice_from_highlights_index(output, outputHighlightsIndex);
     testOutputMatrixSlice = gridData(outputMatrixSlice);
   }
 
-  if (!adversary) startConvolution(stride);
-  let testImage = gridData(image);
-  let testOutput = gridData(output);
-  let testKernel = gridData(kernel);
+  let testImage;
+  let testOutput;
+  let testKernel;
   $ : {
     if (!adversary) startConvolution(stride);
     testImage = gridData(image);
@@ -92,10 +93,10 @@
   <div class="header-text">
     Input ({image.length}, {image[0].length})
   </div>
-  <Dataview on:message={handleMouseover} data={testImage} highlights={inputHighlights} outputLength={output.length}
+  <Dataview on:message={handleMouseover} data={testImage} highlightsIndex={inputHighlightsIndex} outputLength={output.length}
       isKernelMath={false} constraint={getVisualizationSizeConstraint(image.length)}
-      dataRange={dataRange} stride={stride} colorScale={colorScale}
-      isInputLayer={isInputInputLayer}/>
+      {dataRange} {stride} {colorScale} isInputLayer={isInputInputLayer} {stressBounder}
+      samplesDifference={samplesDifferences.prev}/>
 </div>
 <div class="column has-text-centered">
   {#if !adversary}
@@ -106,13 +107,14 @@
   <KernelMathView data={testInputMatrixSlice} kernel={testKernel} constraint={getVisualizationSizeConstraint(kernel.length)}
                   dataRange={dataRange} kernelRange={getDataRange(kernel)} colorScale={colorScale}
                   isInputLayer={isInputInputLayer}/>
-  <Dataview data={testOutputMatrixSlice} highlights={outputHighlights} isKernelMath={true} 
-      constraint={getVisualizationSizeConstraint(kernel.length)} dataRange={dataRange}/>
+  <Dataview data={testOutputMatrixSlice} isKernelMath={true} 
+      constraint={getVisualizationSizeConstraint(kernel.length)} {dataRange}/>
 </div>
 <div class="column has-text-centered">
   <div class="header-text">
     Output ({output.length}, {output[0].length})
   </div>
-  <Dataview on:message={handleMouseover} data={testOutput} highlights={outputHighlights} isKernelMath={false}
-      outputLength={output.length} constraint={getVisualizationSizeConstraint(output.length)} dataRange={dataRange} stride={stride}/>
+  <Dataview on:message={handleMouseover} data={testOutput} highlightsIndex={outputHighlightsIndex} isKernelMath={false}
+      outputLength={output.length} constraint={getVisualizationSizeConstraint(output.length)} {dataRange} {stride}
+      {stressBounder} samplesDifference={samplesDifferences.next}/>
 </div>
