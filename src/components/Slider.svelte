@@ -139,7 +139,7 @@
 
 </style>
 
-<div class="is-flex is-align-items-center">
+<div class="is-flex is-align-items-center" style="width: 100%;">
 
   <span class="tag is-flex-grow-0 is-size-6">{textFormatter(ranges[0])}</span>
 
@@ -148,17 +148,17 @@
 
       {#if showTooltip}
         <div role="tooltip" class="slider-tooltip is-flex is-flex-direction-column is-align-items-center"
-          style={`left: calc(${ value / extent * 100 }% - 20px);`}>
+          style={`left: calc(${ (value - ranges[0]) / extent * 100 }% - 20px);`}>
           <div class="slider-tooltip-text">{textFormatter(value)}</div>
           <div class="slider-tooltip-arrow"></div>
         </div>
       {/if}
 
       <div class="slider-bar has-background-danger"
-        style={`width: ${ value / extent * 100 }%; left: 0%;`}></div>
+        style={`width: ${ (value - ranges[0]) / extent * 100 }%; left: 0%;`}></div>
 
       <div class="slider-button-wrapper is-flex is-justify-content-center is-align-items-center"
-        style={`left: ${ value / extent * 100 }%;`} on:mousedown={handleButtonMouseDown}>
+        style={`left: ${ (value - ranges[0]) / extent * 100 }%;`} on:mousedown={handleButtonMouseDown}>
         <div class="slider-button has-background-white"></div>
       </div>
 

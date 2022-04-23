@@ -10,6 +10,8 @@ export const hSpaceAroundGapStore = writable(undefined);
 export const nodeCoordinateStore = writable([]);
 export const selectedScaleLevelStore = writable(undefined);
 
+export const stressBorderStore = writable(undefined);
+
 export const cnnLayerRangesStore = writable({});
 export const cnnLayerMinMaxStore = writable([]);
 

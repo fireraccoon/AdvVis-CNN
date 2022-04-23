@@ -14,6 +14,7 @@
   export let outputHighlightsIndex;
   export let samplesDifferences;
   export let stressBounder;
+  export let showAllDifference;
 
   const dispatch = createEventDispatcher();
 
@@ -25,7 +26,6 @@
   let interval;
   let counter;
 
-  // lots of replication between mouseover and start-relu. TODO: fix this.
   function startRelu() {
     counter = 0;
     dispatch('message', { isPaused: false });
@@ -78,7 +78,7 @@
   </div>
   <Dataview on:message={handleMouseover} data={gridImage} highlightsIndex={inputHighlightsIndex} outputLength={output.length}
       isKernelMath={false} constraint={getVisualizationSizeConstraint(image.length)} {dataRange} stride={1}
-      {stressBounder} samplesDifference={samplesDifferences.prev}/>  
+      {stressBounder} samplesDifference={samplesDifferences.prev} {showAllDifference} {adversary}/>  
 </div>
 <div class="column has-text-centered">
   {#if !adversary}
@@ -105,5 +105,5 @@
   </div>
   <Dataview on:message={handleMouseover} data={gridOutput} highlightsIndex={outputHighlightsIndex} isKernelMath={false} 
       outputLength={output.length} constraint={getVisualizationSizeConstraint(output.length)} {dataRange} stride={1}
-      {stressBounder} samplesDifference={samplesDifferences.next}/>
+      {stressBounder} samplesDifference={samplesDifferences.next} {showAllDifference} {adversary}/>
 </div>

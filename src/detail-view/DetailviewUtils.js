@@ -39,21 +39,21 @@ export function compute_input_multiplies_with_weight(hoverH, hoverW,
   return input_multiplies_with_weight;
 }
 
-export function getMatrixSliceFromInputHighlights(matrix, highlights, kernelLength) {
-  var indices = highlights.reduce((total, value, index) => {
-  if (value != undefined) total.push(index);
-    return total;
-  }, []);
-  return matrixSlice(matrix, Math.floor(indices[0] / matrix.length), Math.floor(indices[0] / matrix.length) + kernelLength, indices[0] % matrix.length, indices[0] % matrix.length + kernelLength);
-}
+// export function getMatrixSliceFromInputHighlights(matrix, highlights, kernelLength) {
+//   var indices = highlights.reduce((total, value, index) => {
+//   if (value != undefined) total.push(index);
+//     return total;
+//   }, []);
+//   return matrixSlice(matrix, Math.floor(indices[0] / matrix.length), Math.floor(indices[0] / matrix.length) + kernelLength, indices[0] % matrix.length, indices[0] % matrix.length + kernelLength);
+// }
 
-export function getMatrixSliceFromOutputHighlights(matrix, highlights) {
-  var indices = highlights.reduce((total, value, index) => {
-  if (value != false) total.push(index);
-    return total;
-  }, []);
-  return matrixSlice(matrix, Math.floor(indices[0] / matrix.length), Math.floor(indices[0] / matrix.length) + 1, indices[0] % matrix.length, indices[0] % matrix.length + 1);
-}
+// export function getMatrixSliceFromOutputHighlights(matrix, highlights) {
+//   var indices = highlights.reduce((total, value, index) => {
+//   if (value != false) total.push(index);
+//     return total;
+//   }, []);
+//   return matrixSlice(matrix, Math.floor(indices[0] / matrix.length), Math.floor(indices[0] / matrix.length) + 1, indices[0] % matrix.length, indices[0] % matrix.length + 1);
+// }
 
 // Edit these values to change size of low-level conv visualization.
 export function getVisualizationSizeConstraint(imageLength) {
@@ -134,6 +134,12 @@ export const compute_output_index_with_input_index = (inputIndex, kernelLength, 
   return [inputIndex];
 }
 
+/**
+ * Compute the matrix slice from highlight indexs.
+ * @param {[[Number]]} image a 2D image
+ * @param {[[Number]]} highlightsIndex the index to highlight 
+ * @returns {[[Number]]} result matrix slice
+ */
 export const get_matrix_slice_from_highlights_index = (image, highlightsIndex) => {
   let kernelLength = Math.sqrt(highlightsIndex.length);
   console.assert(kernelLength % 1 === 0, "Illegal highlights index.");
@@ -144,18 +150,21 @@ export const get_matrix_slice_from_highlights_index = (image, highlightsIndex) =
 }
 
 /**
- * 
- * @param {[[Number]]} diffs 
- * @param {Number} stressBorderMax 
- * @param {Number} stressBorderMin 
- * @returns {[[Number]]}
+ * Calculate the delta stress indexs
+ * between stressBorderMin and stressBorderMax.
+ * @param {[[Number]]} diffs Differences between the original samples and adversarial ones
+ * @param {Number} stressBorderMax Maximum stress range
+ * @param {Number} stressBorderMin Minimum stress range
+ * @returns {[[[Number]], [[Number]]]} Delta Indexs[BIGGER, SMALLER] to be changed
  */
 export const getDeltaStressIndex = (diffs, stressBorderMin, stressBorderMax) => {
-  let stressIndex = [];
+  let stressIndex = [[], []];
   diffs.forEach((d, i) => {
     d.forEach((dd, ii) => {
       if (dd <= stressBorderMax && dd > stressBorderMin) {
-        stressIndex.push([i, ii]);
+        stressIndex[0].push([i, ii]);
+      } else if (dd >= -stressBorderMax && dd < -stressBorderMin) {
+        stressIndex[1].push([i, ii]);
       }
     });
   });
@@ -163,10 +172,11 @@ export const getDeltaStressIndex = (diffs, stressBorderMin, stressBorderMax) => 
 }
 
 /**
- * 
- * @param {[[Number]]} originImage 
- * @param {[[Number]]} adversaryImage
- * @returns {[[[Number]], {min: Number, max: Number}]} 
+ * Calculate the differences for the
+ * samples after single convalation.
+ * @param {[[Number]]} originImage Original data
+ * @param {[[Number]]} adversaryImage Adversarial data
+ * @returns {[[[Number]], {min: Number, max: Number}]} Differences and difference range
  */
 export const get_single_conv_diff_Ranges = (originImage, adversaryImage) => {
   console.assert(adversaryImage.length === originImage.length, "Shapes could be the same.");

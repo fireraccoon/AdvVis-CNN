@@ -1,4 +1,5 @@
 <script>
+  import Slider from '../components/Slider.svelte';
   import { onMount, afterUpdate, createEventDispatcher } from 'svelte';
   export let logits;
   export let logitsAdver;
@@ -8,6 +9,8 @@
   export let outputName;
   export let outputValue;
   export let outputAdverValue;
+  export let samplesDifferences;
+  export let samplesDifferenceRanges = {};
   export let startAnimation;
 
   let softmaxViewComponent;
@@ -20,6 +23,14 @@
       return d3.format(`.${d}f`)(n);
     }
   }
+
+  let oldStressBounder = Infinity;
+  $: stressRanges = [
+    samplesDifferenceRanges.min === 0 ? samplesDifferenceRanges.min : samplesDifferenceRanges.min - 1e-10,
+    samplesDifferenceRanges.max
+  ];
+  $: stressBounder = (stressRanges[0] + stressRanges[1]) * 0.5;
+  $: stressBounder, softmaxViewComponent && redrawStressLogits();
 
   $: highlightI, (() => {
     if (svg !== null) {
@@ -61,6 +72,52 @@
     let scroll = new SmoothScroll('a[href*="#"]', {offset: -svgHeight});
     let anchor = document.querySelector(`#article-softmax`);
     scroll.animateScroll(anchor);
+  }
+
+  const redrawStressLogits = () => {
+    let stressDeltaIndex = [[], []];
+    let minBounder, maxBounder, border;
+
+    /** Compute the delta stress logits */
+    if (stressBounder < oldStressBounder) {
+      minBounder = stressBounder;
+      maxBounder = oldStressBounder;
+    } else {
+      minBounder = oldStressBounder;
+      maxBounder = stressBounder;
+      border = "black";
+    }
+    samplesDifferences.forEach((d, i) => {
+      if (d <= maxBounder && d > minBounder) {
+        stressDeltaIndex[0].push(i);
+      } else if (d >= -maxBounder && d < -minBounder) {
+        stressDeltaIndex[1].push(i);
+      }
+    });
+
+    /** Update the delta stress logits */
+    stressDeltaIndex[0].forEach(d => {
+      d3.select(softmaxViewComponent)
+        .selectAll(`.softmax-svg > g.formula-right > g.denominator > text:nth-child(${d * 2 + 2})`)
+        .style("fill", (dd, ii) => border ? border : ii === 0 ? "var(--green)" : "var(--red)");
+      if (d === selectedI) {
+        d3.select(softmaxViewComponent)
+          .selectAll(".softmax-svg > g.formula-right > g.numerator-group > text")
+          .style("fill", (dd, ii) => border ? border : ii === 0 ? "var(--green)" : "var(--red)");
+      }
+    });
+    stressDeltaIndex[1].forEach(d => {
+      d3.select(softmaxViewComponent)
+        .selectAll(`.softmax-svg > g.formula-right > g.denominator > text:nth-child(${d * 2 + 2})`)
+        .style("fill", (dd, ii) => border ? border : ii === 0 ? "var(--red)" : "var(--green)");
+      if (d === selectedI) {
+        d3.select(softmaxViewComponent)
+          .selectAll(".softmax-svg > g.formula-right > g.numerator-group > text")
+          .style("fill", (dd, ii) => border ? border : ii === 0 ? "var(--green)" : "var(--red)");
+      }
+    });
+
+    oldStressBounder = stressBounder;
   }
 
   onMount(() => {
@@ -286,6 +343,9 @@
     <div class="adversary-header">Adversary</div>
     
     <svg class="softmax-svg" width="470" height="105"/>
+
+    <Slider value={stressBounder} ranges={stressRanges}
+      on:message={event => stressBounder = event.detail.value}/>
 
     <div class="annotation">
       <img src='PUBLIC_URL/assets/img/pointer.svg' alt='pointer icon'>

@@ -4,7 +4,8 @@
   import { array1d, compute_output_index_with_input_index,
     compute_input_index_with_output_index
   } from './DetailviewUtils.js';
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onDestroy } from 'svelte';
+  import { stressBorderStore } from '../stores'
 
   export let input;
   export let inputAdver;
@@ -21,6 +22,8 @@
   const dilation = 1;
   var isPaused = false;
   
+  let showAllDifference = true;
+  
   const padding = 0;
   $: padded_input_size = input.length + padding * 2;
 
@@ -32,12 +35,14 @@
   }
 
   let stressRanges, stressBounder;
+  let stressBorderStoreUnsubscriber = stressBorderStore.subscribe(value => { stressBounder = value });
   $: {
     stressRanges = [
       Math.min(samplesDifferenceRanges.prev.min, samplesDifferenceRanges.next.min),
       Math.max(samplesDifferenceRanges.prev.max, samplesDifferenceRanges.next.max)
     ];
-    stressBounder = (stressRanges[0] + stressRanges[1]) * 0.5;
+    stressRanges[0] !== 0 ? stressRanges[0] -= 1e-10 : void(0);
+    updateStressBorder();
   }
 
   function handleClickPause() {
@@ -67,9 +72,22 @@
     scroll.animateScroll(anchor);
   }
 
+  const updateStressBorder = () => {
+    if (stressBounder === undefined) {
+      stressBounder = (stressRanges[0] + stressRanges[1]) * 0.5;
+    } else {
+      stressBounder = Math.min(stressBounder, stressRanges[1]);
+      stressBounder = Math.max(stressBounder, stressRanges[0]);
+    }
+    stressBorderStore.set(stressBounder);
+  }
+
   const sliderChangeHandler = (event) => {
     stressBounder = event.detail.value;
+    stressBorderStore.set(stressBounder);
   }
+
+  onDestroy(stressBorderStoreUnsubscriber);
 
   // Test dragging detail view, need more work
   // const detailViewDragStart = (e) => {
@@ -158,6 +176,12 @@
     font-weight: 500;
     color: #4a4a4a;
   }
+
+  .button_show_all {
+    display: flex;
+    justify-content: flex-end;
+  }
+
 </style>
 
 {#if !isExited}
@@ -210,7 +234,7 @@
           on:highlightsUpdate={highlightsUpdateHandler}
           {kernelLength} image={input} output={output} {stride} {isPaused}
           {dataRange} {inputHighlightsIndex} {outputHighlightsIndex}
-          {stressBounder} {samplesDifferences}/>
+          {stressBounder} {samplesDifferences} {showAllDifference}/>
       </div>
 
       <div class="container is-centered is-vcentered">
@@ -218,7 +242,13 @@
           on:highlightsUpdate={highlightsUpdateHandler}
           {kernelLength} image={inputAdver} output={outputAdver} {stride} {isPaused}
           {dataRange} {inputHighlightsIndex} {outputHighlightsIndex}
-          {stressBounder} {samplesDifferences} adversary/>
+          {stressBounder} {samplesDifferences} {showAllDifference} adversary/>
+      </div>
+
+      <div class="button_show_all">
+        <button class="button is-small is-responsive is-info is-active"
+          class:is-inverted={!showAllDifference}
+          on:click={() => showAllDifference = !showAllDifference}>Show all</button>
       </div>
 
       <Slider value={stressBounder} ranges={stressRanges} on:message={sliderChangeHandler}/>

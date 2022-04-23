@@ -1,7 +1,8 @@
 <script>
 	import ActivationAnimator from './ActivationAnimator.svelte';
   import Slider from '../components/Slider.svelte';
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onDestroy } from 'svelte';
+  import { stressBorderStore } from '../stores'
 
   export let input;
   export let inputAdver;
@@ -15,17 +16,23 @@
   const dispatch = createEventDispatcher();
   let isPaused = false;
 
+  let showAllDifference = true;
+
   let inputHighlightsIndex = [[0, 0]]
   let outputHighlightsIndex = [[0, 0]];
 
   let stressRanges, stressBounder;
+  let stressBorderStoreUnsubscriber = stressBorderStore.subscribe(value => { stressBounder = value });
   $: {
     stressRanges = [
       Math.min(samplesDifferenceRanges.prev.min, samplesDifferenceRanges.next.min),
       Math.max(samplesDifferenceRanges.prev.max, samplesDifferenceRanges.next.max)
     ];
-    stressBounder = (stressRanges[0] + stressRanges[1]) * 0.5;
+    stressRanges[0] !== 0 ? stressRanges[0] -= 1e-10 : void(0);
+    updateStressBorder();
   }
+  
+  let textFormatter = d3.format(".4f");
   
   function handleClickPause() {
     isPaused = !isPaused;
@@ -54,9 +61,22 @@
     scroll.animateScroll(anchor);
   }
 
+  const updateStressBorder = () => {
+    if (stressBounder === undefined) {
+      stressBounder = (stressRanges[0] + stressRanges[1]) * 0.5;
+    } else {
+      stressBounder = Math.min(stressBounder, stressRanges[1]);
+      stressBounder = Math.max(stressBounder, stressRanges[0]);
+    }
+    stressBorderStore.set(stressBounder);
+  }
+
   const sliderChangeHandler = (event) => {
     stressBounder = event.detail.value;
+    stressBorderStore.set(stressBounder);
   }
+
+  onDestroy(stressBorderStoreUnsubscriber);
 
 </script>
 
@@ -118,6 +138,31 @@
     font-weight: 500;
     color: #4a4a4a;
   }
+
+  .self-label {
+    border: 2px solid var(--green);
+    font-size: .8em;
+  }
+
+  .contrast-label {
+    border: 2px solid var(--red);
+    font-size: .8em;
+  }
+
+  .self-legend {
+    width: .8em;
+    height: .8em;
+    display: inline-block;
+    background-color: var(--green);
+  }
+
+  .contrast-legend {
+    width: .8em;
+    height: .8em;
+    display: inline-block;
+    background-color: var(--red);
+  }
+
 </style>
 
 {#if !isExited}
@@ -154,7 +199,7 @@
           on:highlightsUpdate={highlightsUpdateHandler}
           image={input} {output} {isPaused} {dataRange}
           {inputHighlightsIndex} {outputHighlightsIndex}
-          {stressBounder} {samplesDifferences}/>
+          {stressBounder} {samplesDifferences} {showAllDifference}/>
       </div>
       
       <div class="container is-centered is-vcentered">
@@ -162,7 +207,27 @@
           on:highlightsUpdate={highlightsUpdateHandler}
           image={inputAdver} output={outputAdver} {isPaused} {dataRange}
           {inputHighlightsIndex} {outputHighlightsIndex}
-          {stressBounder} {samplesDifferences} adversary/>
+          {stressBounder} {samplesDifferences} {showAllDifference} adversary/>
+      </div>
+
+      <div class="container">
+        <div class="is-flex is-align-items-center">
+          <div class="self-legend"></div>
+          <span>self &nbsp;&nbsp;</span> 
+          <div class="contrast-legend"></div>
+          <span>contrast : &nbsp;&nbsp;</span>
+          <span>
+            |
+            <span class="self-label">self</span>
+            - 
+            <span class="contrast-label">contrast</span>
+            | {stressRanges[0] === 0 ? '>': stressBounder === stressRanges[0] ? '>=' : '>'}
+            {textFormatter(stressBounder)}
+          </span>
+        </div>
+        <button class="button is-small is-responsive is-info is-active"
+          class:is-inverted={!showAllDifference}
+          on:click={() => showAllDifference = !showAllDifference}>Show all</button>
       </div>
 
       <Slider value={stressBounder} ranges={stressRanges} on:message={sliderChangeHandler}/>

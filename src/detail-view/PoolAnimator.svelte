@@ -16,6 +16,7 @@
   export let outputHighlightsIndex;
   export let samplesDifferences;
   export let stressBounder;
+  export let showAllDifference;
 
   const dispatch = createEventDispatcher();
 
@@ -35,7 +36,6 @@
   let interval;
   let counter;
 
-  // lots of replication between mouseover and start-pool. TODO: fix this.
   function startMaxPool(stride) {
     counter = 0;
     if (stride <= 0) return;
@@ -90,7 +90,7 @@
 
   <Dataview on:message={handleMouseover} data={testImage} highlightsIndex={inputHighlightsIndex} outputLength={output.length}
       isKernelMath={false} constraint={getVisualizationSizeConstraint(image.length)} {dataRange} {stride} {stressBounder}
-      samplesDifference={samplesDifferences.prev}/>  
+      samplesDifference={samplesDifferences.prev} {showAllDifference} {adversary}/>  
 </div>
 <div class="column has-text-centered">
   {#if !adversary}
@@ -114,5 +114,5 @@
   </div>
   <Dataview on:message={handleMouseover} data={testOutput} highlightsIndex={outputHighlightsIndex} isKernelMath={false} 
       outputLength={output.length} constraint={getVisualizationSizeConstraint(output.length)} {dataRange} {stride} {stressBounder}
-      samplesDifference={samplesDifferences.next}/>
+      samplesDifference={samplesDifferences.next} {showAllDifference} {adversary}/>
 </div>

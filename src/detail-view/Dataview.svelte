@@ -10,6 +10,8 @@
   export let isInputLayer = false;
   export let samplesDifference = undefined;
   export let stressBounder = undefined;
+  export let adversary = false;
+  export let showAllDifference = undefined;
 
   import { createEventDispatcher } from 'svelte';
   import { getDeltaStressIndex } from './DetailviewUtils'
@@ -19,6 +21,8 @@
   const standardCellColor = "ddd";
   const dispatch = createEventDispatcher();
 
+  const showDiffsIndex = adversary ? 0 : 1;
+
   let oldHighlightsIndex;
   let oldStressBounder;
   let highlightUnitsLastStates;
@@ -26,7 +30,9 @@
   $: data, grid_final && redraw();
   $: stressBounder, data, grid_final && !isKernelMath && redrawStressUnits();
   $: highlightsIndex, grid_final && updateHighLights();
+  $: showAllDifference, !isKernelMath && changeShowedDifferences();
 
+  /** TODO: use <canvas> rather than <svg> to improve the speed of render. */
   const redraw = () => {
     d3.select(grid_final).selectAll("#grid > *").remove();
     highlightUnitsLastStates = Array.from({length: highlightsIndex.length}, () => "none");
@@ -104,31 +110,34 @@
     oldHighlightsIndex = highlightsIndex;
   }
 
+  /** TODO: use <canvas> rather than <svg> to improve the speed of render. */
   const redrawStressUnits = () => {
     let stressUnitsIndex, border;
     if (stressBounder < oldStressBounder) {
       stressUnitsIndex = getDeltaStressIndex(samplesDifference, stressBounder, oldStressBounder);
-      border = "red";
     } else {
       stressUnitsIndex = getDeltaStressIndex(samplesDifference, oldStressBounder, stressBounder);
       border = "none";
     }
-    stressUnitsIndex.forEach(d => {
+
+    if (showAllDifference) {
+      stressUnitsIndex[showDiffsIndex ? 0 : 1].forEach(d => {
+        d3.select(grid_final).select('#grid > svg')
+          .select(`.row:nth-child(${d[0] + 1}) .square:nth-child(${d[1] + 1})`)
+          .style("stroke", border ? border : "red");
+      });
+    }
+    stressUnitsIndex[showDiffsIndex].forEach(d => {
       d3.select(grid_final).select('#grid > svg')
         .select(`.row:nth-child(${d[0] + 1}) .square:nth-child(${d[1] + 1})`)
-        .style("stroke", border);
+        .style("stroke", border ? border : "green");
     });
-    let element, strokeStyle;
-    highlightsIndex.forEach((d, i) => {
-      element = d3.select(grid_final).select('#grid > svg')
-        .select(`.row:nth-child(${d[0] + 1}) .square:nth-child(${d[1] + 1})`);
-      strokeStyle = element.style("stroke");
-      highlightUnitsLastStates[i] = (strokeStyle === "black" ? highlightUnitsLastStates[i] : strokeStyle);
-      element.style("stroke", "black");
-    });
+
+    restoreHighLights();
     oldStressBounder = stressBounder;
   }
 
+  /** TODO: use <canvas> rather than <svg> to improve the speed of render. */
   const updateHighLights = () => {
     if (highlightsIndex != oldHighlightsIndex) {
       oldHighlightsIndex.forEach((d, i) => {
@@ -146,6 +155,32 @@
         element.style("stroke", "black");
       });
     }
+  }
+
+  const restoreHighLights = () => {
+    let element, strokeStyle;
+    highlightsIndex.forEach((d, i) => {
+      element = d3.select(grid_final).select('#grid > svg')
+        .select(`.row:nth-child(${d[0] + 1}) .square:nth-child(${d[1] + 1})`);
+      strokeStyle = element.style("stroke");
+      highlightUnitsLastStates[i] = (strokeStyle === "black" ? highlightUnitsLastStates[i] : strokeStyle);
+      element.style("stroke", "black");
+    });
+  }
+
+  const changeShowedDifferences = () => {
+    if (!grid_final) return;
+    let border;
+    let stressUnitsIndex = getDeltaStressIndex(samplesDifference, stressBounder, Infinity);
+    if (!showAllDifference) {
+      border = "none";
+    }
+    stressUnitsIndex[showDiffsIndex ? 0 : 1].forEach(d => {
+      d3.select(grid_final).select('#grid > svg')
+        .select(`.row:nth-child(${d[0] + 1}) .square:nth-child(${d[1] + 1})`)
+        .style("stroke", border ? border : "red");
+    });
+    restoreHighLights();
   }
 
 </script>

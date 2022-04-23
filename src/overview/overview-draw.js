@@ -933,36 +933,59 @@ export const updateSamplesDiffRanges = (success, fail) => {
   new Promise((resolve, reject) => {
     let diffs = [];
     let diffRangesLocal = [], diffRangesModule = [], diffRangesGlobal = [];
-    let rangesLocal, rangesModule, rangesGlobal;
+    let rangesLocal, rangesModule, rangesGlobal, logitsRanges = {};
     rangesGlobal = {min: Infinity, max: -Infinity};
     rangesModule = {min: Infinity, max: -Infinity};
 
     abort = reject;
 
-    for (let l = 0; l < cnn.length && cnn[l][0].type != 'fc'; l++) {
+    outLoop: for (let l = 0; l < cnn.length; l++) {
+      let layerDiffs = [];
       rangesLocal = {min: Infinity, max: -Infinity};
 
-      diffs.push(cnn[l].map((d, i) => {
-        if (d.output.length === undefined) {
-          reject(`Layer ${d.layerName} with error output.`);
+      for (let i = 0; i < cnn[l].length; i++) {
+        let diff, diffAbs;
+        if (cnn[l][i].output.length === undefined) {
+
+          /** Record the logits' difference ranges */
+          if (cnn[l][i].type === "fc") {
+            diff = cnn[l][i].logit - cnnAdver[l][i].logit;
+            diffAbs = Math.abs(diff);
+            rangesLocal.min = Math.min(rangesLocal.min, diffAbs);
+            rangesLocal.max = Math.max(rangesLocal.max, diffAbs);
+            layerDiffs.push(diff);
+
+            /** Add the logits' difference ranges and continue out loop to ignore change other ranges */
+            if (i === cnn[l].length - 1) {
+              diffs.logits = layerDiffs;
+              logitsRanges = rangesLocal;
+              continue outLoop;
+            }
+            /** Continue inner loop to ignore push error layerDiffs */
+            continue;
+          }
+          reject(`Layer "${cnn[l][i].layerName}" with error output.`);
         }
 
-        return d.output.map((dd, ii) => {
+        layerDiffs.push(cnn[l][i].output.map((dd, ii) => {
           if (dd.length !== undefined) {
             return dd.map((ddd, iii) => {
-              let diff = Math.abs(ddd - cnnAdver[l][i].output[ii][iii]);
-              rangesLocal.min = Math.min(rangesLocal.min, diff);
-              rangesLocal.max = Math.max(rangesLocal.max, diff);
+              diff = ddd - cnnAdver[l][i].output[ii][iii];
+              diffAbs = Math.abs(diff);
+              rangesLocal.min = Math.min(rangesLocal.min, diffAbs);
+              rangesLocal.max = Math.max(rangesLocal.max, diffAbs);
               return diff;
             });
           } else {
-            let diff = Math.abs(dd - cnnAdver[l][i].output[ii]);
-            rangesLocal.min = Math.min(rangesLocal.min, diff);
-            rangesLocal.max = Math.max(rangesLocal.max, diff);
+            diff = dd - cnnAdver[l][i].output[ii];
+            diffAbs = Math.abs(diff);
+            rangesLocal.min = Math.min(rangesLocal.min, diffAbs);
+            rangesLocal.max = Math.max(rangesLocal.max, diffAbs);
             return diff;
           }
-        });
-      }));
+        }));
+      }
+      diffs.push(layerDiffs);
 
       diffRangesLocal.push(rangesLocal);
       diffRangesGlobal.push({});
@@ -983,7 +1006,8 @@ export const updateSamplesDiffRanges = (success, fail) => {
       diffRanges: {
         local: diffRangesLocal,
         module: diffRangesModule,
-        global: diffRangesGlobal
+        global: diffRangesGlobal,
+        logits: logitsRanges
       }
     });
   })

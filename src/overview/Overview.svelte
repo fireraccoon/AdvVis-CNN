@@ -1145,7 +1145,7 @@
     cnnStore.set(cnn);
     console.log(cnn);
 
-    cnnAdver.flatten = cnnAdver.splice(cnnAdver.length - 2, 1);
+    cnnAdver.flatten = cnnAdver.splice(cnnAdver.length - 2, 1)[0];
     cnnAdverStore.set(cnnAdver);
     console.log(cnnAdver);
 
@@ -1200,7 +1200,7 @@
       cnn.flatten = flatten;
       cnnStore.set(cnn);
 
-      cnnAdver.flatten = cnnAdver.splice(cnnAdver.length - 2, 1);
+      cnnAdver.flatten = cnnAdver.splice(cnnAdver.length - 2, 1)[0];
       cnnAdverStore.set(cnnAdver);
 
       // Update all scales used in the CNN view
@@ -1263,7 +1263,7 @@
     cnn.flatten = flatten;
     cnnStore.set(cnn);
 
-    cnnAdver.flatten = cnnAdver.splice(cnnAdver.length - 2, 1);
+    cnnAdver.flatten = cnnAdver.splice(cnnAdver.length - 2, 1)[0];
     cnnAdverStore.set(cnnAdver);
 
     // Update the UI
@@ -1678,6 +1678,8 @@
                  outputName={softmaxDetailViewInfo.outputName}
                  outputAdverValue={softmaxDetailViewInfo.outputAdverValue}
                  outputValue={softmaxDetailViewInfo.outputValue}
+                 samplesDifferences={samplesDifferences.logits}
+                 samplesDifferenceRanges={samplesDifferenceRanges.logits}
                  startAnimation={softmaxDetailViewInfo.startAnimation}
                  on:xClicked={handleExitFromDetiledSoftmaxView}
                  on:mouseOver={softmaxDetailViewMouseOverHandler}
