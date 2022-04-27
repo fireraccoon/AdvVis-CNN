@@ -58,7 +58,7 @@
 
   <div id="logo">
     <div id="logo-text">
-      CNN Explainer
+		AdvVis CNN
     </div>
 
 		<svg width="510px" height="50px">
@@ -75,28 +75,16 @@
 
 			<g filter="url(#chalk-texture)" transform="translate(0, 35)">
 				<text id="svg-logo-tagline">
-					Learn Convolutional Neural Network (CNN) in your browser! 
+					Learning the Manifestation of Adversarial Examples on CNN! 
 				</text>
 			</g>
 		</svg>
   </div>
 
 	<div class="icons">
-	
-		<div class="icon" title="Research paper">
-			<a target="_blank" href="https://arxiv.org/abs/2004.15004">
-				<img src="PUBLIC_URL/assets/img/pdf.png" alt="pdf icon"/>
-			</a>
-		</div>
-
-		<div class="icon" title="Demo video">
-			<a target="_blank" href="https://youtu.be/HnWIHWFbuUQ">
-				<img src="PUBLIC_URL/assets/img/youtube.png" alt="youtube icon"/>
-			</a>
-		</div>
 
 		<div class="icon" title="Open-source code">
-			<a target="_blank" href="https://github.com/poloclub/cnn-explainer">
+			<a target="_blank" href="https://github.com/fireraccoon/AdvVis-CNN">
 				<img src="PUBLIC_URL/assets/img/github.png" alt="github icon"/>
 			</a>
 		</div>
