@@ -1,5 +1,6 @@
 <script>
   import Slider from '../components/Slider.svelte';
+  import SliderTips from '../components/SliderTips.svelte';
   import { onMount, afterUpdate, createEventDispatcher } from 'svelte';
   export let logits;
   export let logitsAdver;
@@ -302,7 +303,7 @@
   }
 
   .box {
-    padding: 5px 10px 15px 10px;
+    padding: 5px 15px 10px 15px;
     position: relative;
     display: flex;
     flex-direction: column;
@@ -344,8 +345,11 @@
     
     <svg class="softmax-svg" width="470" height="105"/>
 
-    <Slider value={stressBounder} ranges={stressRanges}
-      on:message={event => stressBounder = event.detail.value}/>
+    <div style="width: 100%;">
+      <SliderTips {stressBounder} {stressRanges} class="width-100"/>
+      <Slider value={stressBounder} ranges={stressRanges}
+        on:message={event => stressBounder = event.detail.value}/>
+    </div>
 
     <div class="annotation">
       <img src='PUBLIC_URL/assets/img/pointer.svg' alt='pointer icon'>

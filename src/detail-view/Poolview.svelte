@@ -1,6 +1,7 @@
 <script>
 	import PoolAnimator from './PoolAnimator.svelte';
   import Slider from '../components/Slider.svelte';
+  import SliderTips from '../components/SliderTips.svelte';
   import { array1d, compute_output_index_with_input_index,
     compute_input_index_with_output_index
   } from './DetailviewUtils.js';
@@ -177,11 +178,6 @@
     color: #4a4a4a;
   }
 
-  .button_show_all {
-    display: flex;
-    justify-content: flex-end;
-  }
-
 </style>
 
 {#if !isExited}
@@ -245,7 +241,8 @@
           {stressBounder} {samplesDifferences} {showAllDifference} adversary/>
       </div>
 
-      <div class="button_show_all">
+      <div class="container">
+        <SliderTips {stressBounder} {stressRanges}/>
         <button class="button is-small is-responsive is-info is-active"
           class:is-inverted={!showAllDifference}
           on:click={() => showAllDifference = !showAllDifference}>Show all</button>

@@ -1,6 +1,7 @@
 <script>
 	import ConvolutionAnimator from './ConvolutionAnimator.svelte';
   import Slider from '../components/Slider.svelte';
+  import SliderTips from '../components/SliderTips.svelte';
   import { singleConv } from '../utils/cnn.js';
   import { array1d, compute_output_index_with_input_index,
     compute_input_index_with_output_index, get_single_conv_diff_Ranges
@@ -166,30 +167,6 @@
     color: #4a4a4a;
   }
 
-  .self-label {
-    border: 2px solid var(--green);
-    font-size: .8em;
-  }
-
-  .contrast-label {
-    border: 2px solid var(--red);
-    font-size: .8em;
-  }
-
-  .self-legend {
-    width: .8em;
-    height: .8em;
-    display: inline-block;
-    background-color: var(--green);
-  }
-
-  .contrast-legend {
-    width: .8em;
-    height: .8em;
-    display: inline-block;
-    background-color: var(--red);
-  }
-
 </style>
 
 {#if !isExited}
@@ -255,20 +232,7 @@
       </div>
 
       <div class="container">
-        <div class="is-flex is-align-items-center">
-          <div class="self-legend"></div>
-          <span>self &nbsp;&nbsp;</span> 
-          <div class="contrast-legend"></div>
-          <span>contrast : &nbsp;&nbsp;</span>
-          <span>
-            |
-            <span class="self-label">self</span>
-            - 
-            <span class="contrast-label">contrast</span>
-            | {stressRanges[0] === 0 ? '>': stressBounder === stressRanges[0] ? '>=' : '>'}
-            {textFormatter(stressBounder)}
-          </span>
-        </div>
+        <SliderTips {stressBounder} {stressRanges}/>
         <button class="button is-small is-responsive is-info is-active"
           class:is-inverted={!showAllDifference}
           on:click={() => showAllDifference = !showAllDifference}>Show all</button>
